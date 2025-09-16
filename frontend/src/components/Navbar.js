@@ -62,15 +62,15 @@ function Navbar() {
 
 // Inline CSS Styles
 const navStyle = {
-  backgroundColor: '#013D83', // Navy blue background
-  padding: '0.5rem 1rem',
+  backgroundColor: '#013D83', 
+  padding: '1.2rem 1rem',
 };
 
 const linkStyle = {
-  color: 'white', // White text color
+  color: 'white', 
   fontWeight: '500',
   margin: '0 0.5rem',
-  textDecoration: 'none' // Remove underline from links
+  textDecoration: 'none' 
 };
 
 // Make the component available to other files

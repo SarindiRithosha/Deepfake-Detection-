@@ -1,15 +1,16 @@
 import React, { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 function Detection() {
-  // State management
   const [file, setFile] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [status, setStatus] = useState('idle'); // 'idle', 'uploading', 'processing', 'success', 'formatError', 'sizeError'
+  const [status, setStatus] = useState('idle');
   const fileInputRef = useRef(null);
+  const navigate = useNavigate();
 
-  // Handle file selection
-  const handleFileChange = (selectedFile) => {
-    // Check file format
+  const handleFileChange = async (selectedFile) => {
+    // Validate file type
     const allowedFormats = ['.mp4', '.mov', '.avi'];
     const fileExtension = selectedFile.name.substring(selectedFile.name.lastIndexOf('.')).toLowerCase();
     
@@ -18,40 +19,58 @@ function Detection() {
       return;
     }
 
-    // Check file size (200MB in bytes)
-    const maxSize = 200 * 1024 * 1024; // 200MB in bytes
+    // Validate file size (200MB)
+    const maxSize = 200 * 1024 * 1024;
     if (selectedFile.size > maxSize) {
       setStatus('sizeError');
       return;
     }
 
-    // File is valid
     setFile(selectedFile);
     setStatus('uploading');
-    
-    // Simulate upload progress
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += 5;
-      setUploadProgress(progress);
-      if (progress >= 100) {
-        clearInterval(interval);
-        setStatus('processing');
-        
-        // Simulate processing and then redirect to success
-        setTimeout(() => {
-          setStatus('success');
-          // Simulate redirect to results page after 3 seconds
-          setTimeout(() => {
-            // In a real app, you would use: navigate('/results');
-            console.log('Redirecting to results page...');
-          }, 3000);
-        }, 3000);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      const response = await axios.post('http://localhost:8000/analyze', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total
+          );
+          setUploadProgress(percentCompleted);
+        },
+        timeout: 300000,
+      });
+
+      setStatus('processing');
+      
+      setTimeout(() => {
+        navigate('/results', { 
+          state: { 
+            analysisData: response.data,
+            uploadedFile: selectedFile 
+          } 
+        });
+      }, 3000);
+
+    } catch (error) {
+      console.error('Upload error:', error);
+      if (error.response?.status === 400) {
+        if (error.response.data.detail.includes('format')) {
+          setStatus('formatError');
+        } else if (error.response.data.detail.includes('size')) {
+          setStatus('sizeError');
+        }
+      } else {
+        setStatus('sizeError');
       }
-    }, 100);
+    }
   };
 
-  // Handle drag and drop
   const handleDrop = (e) => {
     e.preventDefault();
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
@@ -59,24 +78,20 @@ function Detection() {
     }
   };
 
-  // Handle drag over
   const handleDragOver = (e) => {
     e.preventDefault();
   };
 
-  // Handle file input click
   const handleFileInputClick = () => {
     fileInputRef.current.click();
   };
 
-  // Handle try again
   const handleTryAgain = () => {
     setFile(null);
     setUploadProgress(0);
     setStatus('idle');
   };
 
-  // Format file size
   const formatFileSize = (bytes) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -85,38 +100,22 @@ function Detection() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  // Get container style based on status
-  const getContainerStyle = () => {
-    switch (status) {
-      case 'formatError':
-      case 'sizeError':
-        return { ...containerStyle, ...errorContainerStyle };
-      case 'success':
-        return { ...containerStyle, ...successContainerStyle };
-      default:
-        return containerStyle;
-    }
-  };
-
   return (
     <div style={pageStyle}>
-      {/* Header Section */}
       <div style={headerStyle}>
         <h1 style={titleStyle}>Upload Your Video for Analysis</h1>
         <p style={subtitleStyle}>Upload your video file and let our AI detect deepfake content</p>
       </div>
 
-      {/* Main Detection Container - Style changes based on status */}
-      <div style={getContainerStyle()}>
+      <div style={containerStyle}>
         <input
           type="file"
           ref={fileInputRef}
           style={{ display: 'none' }}
           accept=".mp4,.mov,.avi"
-          onChange={(e) => handleFileChange(e.target.files[0])}
+          onChange={(e) => e.target.files[0] && handleFileChange(e.target.files[0])}
         />
 
-        {/* IDLE STATE - Drag & Drop */}
         {status === 'idle' && (
           <div
             style={dropZoneStyle}
@@ -139,7 +138,6 @@ function Detection() {
           </div>
         )}
 
-        {/* UPLOADING STATE */}
         {status === 'uploading' && file && (
           <div style={uploadingStyle}>
             <img
@@ -152,7 +150,6 @@ function Detection() {
             <p style={fileNameStyle}>{file.name}</p>
             <p style={fileSizeStyle}>{formatFileSize(file.size)}</p>
             
-            {/* Progress Bar */}
             <div style={progressBarContainerStyle}>
               <div style={progressBarStyle}>
                 <div style={{...progressFillStyle, width: `${uploadProgress}%`}}></div>
@@ -162,7 +159,6 @@ function Detection() {
           </div>
         )}
 
-        {/* PROCESSING STATE */}
         {status === 'processing' && (
           <div style={processingStyle}>
             <div style={spinnerStyle}></div>
@@ -176,25 +172,8 @@ function Detection() {
           </div>
         )}
 
-        {/* SUCCESS STATE */}
-        {status === 'success' && (
-          <div style={successStyle}>
-            <img
-              src={process.env.PUBLIC_URL + "/check.png"}
-              alt="Success"
-              width="80"
-              height="80"
-              style={iconStyle}
-            />
-            <p style={successTitleStyle}>Analysis Complete!</p>
-            <p style={successTextStyle}>Redirecting you to the results page...</p>
-            <div style={successSpinnerStyle}></div>
-          </div>
-        )}
-
-        {/* ERROR STATES */}
         {(status === 'formatError' || status === 'sizeError') && (
-          <div style={errorStyle}>
+          <div style={errorContainerStyle}>
             <img
               src={process.env.PUBLIC_URL + "/warning.png"}
               alt="Warning"
@@ -215,7 +194,6 @@ function Detection() {
           </div>
         )}
 
-        {/* Supported formats text (only shown in idle state) */}
         {status === 'idle' && (
           <p style={supportedTextStyle}>
             Supported Formats: .mp4, .mov, .avi | Max File Size: 200MB
@@ -235,7 +213,6 @@ const pageStyle = {
   flexDirection: 'column',
   alignItems: 'center',
   backgroundColor: '#E5E3E3',
-
 };
 
 const headerStyle = {
@@ -257,7 +234,6 @@ const subtitleStyle = {
   opacity: '0.8',
 };
 
-// Base container style
 const containerStyle = {
   backgroundColor: '#F8F8F8',
   borderRadius: '15px',
@@ -272,16 +248,6 @@ const containerStyle = {
   position: 'relative',
 };
 
-// Container styles for different states
-const errorContainerStyle = {
-  backgroundColor: '#F6EBEB',
-};
-
-const successContainerStyle = {
-  backgroundColor: 'rgba(231, 253, 226, 0.71)',
-};
-
-// Drag & Drop Zone
 const dropZoneStyle = {
   border: '2px dashed #ccc',
   borderRadius: '10px',
@@ -319,9 +285,14 @@ const chooseFileButtonStyle = {
   fontWeight: '700',
   fontSize: '1rem',
   cursor: 'pointer',
+  transition: 'all 0.3s ease',
 };
 
-// Uploading State
+chooseFileButtonStyle[':hover'] = {
+  transform: 'translateY(-2px)',
+  boxShadow: '0 5px 15px rgba(0,0,0,0.2)',
+};
+
 const uploadingStyle = {
   textAlign: 'center',
   width: '100%',
@@ -366,7 +337,6 @@ const progressTextStyle = {
   fontSize: '0.9rem',
 };
 
-// Processing State
 const processingStyle = {
   textAlign: 'center',
   width: '100%',
@@ -407,37 +377,10 @@ const warningTextStyle = {
   margin: '0',
 };
 
-// Success State
-const successStyle = {
-  textAlign: 'center',
-  width: '100%',
-};
-
-const successTitleStyle = {
-  color: '#04570D',
-  fontWeight: '700',
-  fontSize: '1.3rem',
-  marginBottom: '0.5rem',
-};
-
-const successTextStyle = {
-  color: '#007206',
-  fontSize: '0.9rem',
-  marginBottom: '1.5rem',
-};
-
-const successSpinnerStyle = {
-  width: '30px',
-  height: '30px',
-  border: '3px solid #f3f3f3',
-  borderTop: '3px solid #007206',
-  borderRadius: '50%',
-  animation: 'spin 1s linear infinite',
-  margin: '0 auto',
-};
-
-// Error State
-const errorStyle = {
+const errorContainerStyle = {
+  backgroundColor: '#F6EBEB',
+  padding: '2rem',
+  borderRadius: '15px',
   textAlign: 'center',
   width: '100%',
 };
@@ -465,7 +408,6 @@ const tryAgainButtonStyle = {
   cursor: 'pointer',
 };
 
-// Supported formats text
 const supportedTextStyle = {
   color: '#766F6F',
   fontWeight: '600',
@@ -474,7 +416,6 @@ const supportedTextStyle = {
   fontSize: '0.9rem',
 };
 
-// CSS Animation for spinners
 const styles = `
   @keyframes spin {
     0% { transform: rotate(0deg); }
@@ -482,7 +423,6 @@ const styles = `
   }
 `;
 
-// Add the animation styles to the document
 const styleSheet = document.createElement('style');
 styleSheet.innerText = styles;
 document.head.appendChild(styleSheet);

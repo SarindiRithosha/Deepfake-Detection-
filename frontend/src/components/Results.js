@@ -7,18 +7,34 @@ function Results() {
   const location = useLocation();
   const navigate = useNavigate();
   const [analysisData, setAnalysisData] = useState(null);
+  const [uploadedFile, setUploadedFile] = useState(null);
   const [selectedFrame, setSelectedFrame] = useState(0);
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [videoUrl, setVideoUrl] = useState(null);
   const resultsRef = useRef(null);
+  const videoRef = useRef(null);
 
   useEffect(() => {
-    if (location.state?.analysisData) {
+    if (location.state?.analysisData && location.state?.uploadedFile) {
       setAnalysisData(location.state.analysisData);
+      setUploadedFile(location.state.uploadedFile);
+      
+      // Create object URL for the uploaded video file
+      const url = URL.createObjectURL(location.state.uploadedFile);
+      setVideoUrl(url);
+      
       setLoading(false);
     } else {
       fetchMockData();
     }
+
+    // Clean up object URL when component unmounts
+    return () => {
+      if (videoUrl) {
+        URL.revokeObjectURL(videoUrl);
+      }
+    };
   }, [location]);
 
   const fetchMockData = async () => {
@@ -26,7 +42,6 @@ function Results() {
       const response = await axios.get('http://localhost:8000/');
       console.log('API is running:', response.data);
       
-      // Create mock data for demonstration
       setAnalysisData({
         prediction: 'FAKE',
         confidence: 0.96,
@@ -53,6 +68,10 @@ function Results() {
   };
 
   const handleAnalyzeAnother = () => {
+    // Clean up video URL before navigating
+    if (videoUrl) {
+      URL.revokeObjectURL(videoUrl);
+    }
     navigate('/detect');
   };
 
@@ -120,10 +139,26 @@ function Results() {
       </div>
 
       <div style={videoContainerStyle}>
-        <div style={videoPlaceholderStyle}>
-          <p>Video Player Would Appear Here</p>
-          <p style={videoPlaceholderSubtext}>(Actual video playback implementation would go here)</p>
-        </div>
+        {videoUrl ? (
+          <video
+            ref={videoRef}
+            controls
+            style={videoPlayerStyle}
+            src={videoUrl}
+            onError={(e) => {
+              console.error('Video playback error:', e);
+              e.target.style.display = 'none';
+              e.target.nextSibling.style.display = 'block';
+            }}
+          >
+            Your browser does not support the video tag.
+          </video>
+        ) : (
+          <div style={videoPlaceholderStyle}>
+            <p>Video Player Placeholder</p>
+            <p style={videoPlaceholderSubtext}>(No video file available for playback)</p>
+          </div>
+        )}
       </div>
 
       {hasFrames && (
@@ -271,7 +306,7 @@ const verdictBadgeStyle = {
   fontSize: '2rem',
   fontWeight: '700',
   padding: '1rem 2rem',
-  borderRadius: '50px',
+  borderRadius: '10px',
   display: 'inline-block',
   marginBottom: '1rem',
 };
@@ -286,6 +321,18 @@ const videoContainerStyle = {
   display: 'flex',
   justifyContent: 'center',
   marginBottom: '3rem',
+  width: '100%',
+  maxWidth: '800px',
+  marginLeft: 'auto',
+  marginRight: 'auto',
+};
+
+const videoPlayerStyle = {
+  width: '100%',
+  maxWidth: '640px',
+  height: '360px',
+  borderRadius: '10px',
+  backgroundColor: '#000',
 };
 
 const videoPlaceholderStyle = {
@@ -306,6 +353,7 @@ const videoPlaceholderSubtext = {
 
 const sectionStyle = {
   marginBottom: '3rem',
+  width: '100%',
 };
 
 const subtitleStyle = {
@@ -359,6 +407,7 @@ const heatmapContainerStyle = {
   borderRadius: '15px',
   padding: '2rem',
   marginBottom: '3rem',
+  width: '100%',
 };
 
 const heatmapHeaderStyle = {
@@ -385,6 +434,11 @@ const toggleButtonStyle = {
   borderRadius: '8px',
   fontWeight: '500',
   cursor: 'pointer',
+  transition: 'all 0.3s ease',
+};
+
+toggleButtonStyle[':hover'] = {
+  backgroundColor: '#8BC3D9',
 };
 
 const selectedFrameContainerStyle = {
@@ -402,6 +456,7 @@ const selectedImageStyle = {
   maxWidth: '100%',
   maxHeight: '400px',
   borderRadius: '8px',
+  border: '2px solid #ddd',
 };
 
 const heatmapOverlayStyle = {
@@ -421,6 +476,7 @@ const heatmapExplanationStyle = {
   justifyContent: 'center',
   color: '#6D6D6D',
   fontSize: '0.9rem',
+  marginTop: '1rem',
 };
 
 const explanationTextStyle = {
@@ -432,6 +488,7 @@ const summaryContainerStyle = {
   borderRadius: '15px',
   padding: '2rem',
   marginBottom: '3rem',
+  width: '100%',
 };
 
 const summaryTitleStyle = {
@@ -445,6 +502,7 @@ const summaryTextStyle = {
   color: '#000',
   lineHeight: '1.6',
   marginBottom: '1rem',
+  fontSize: '1.1rem',
 };
 
 const anomaliesListStyle = {
@@ -462,10 +520,12 @@ const anomalyBulletStyle = {
   color: '#FF0606',
   fontWeight: 'bold',
   marginRight: '0.5rem',
+  fontSize: '1.2rem',
 };
 
 const anomalyTextStyle = {
   color: '#000',
+  lineHeight: '1.5',
 };
 
 const ctaContainerStyle = {
@@ -473,6 +533,7 @@ const ctaContainerStyle = {
   justifyContent: 'center',
   gap: '1rem',
   flexWrap: 'wrap',
+  marginTop: '2rem',
 };
 
 const analyzeAnotherButtonStyle = {
@@ -484,6 +545,12 @@ const analyzeAnotherButtonStyle = {
   fontWeight: '600',
   cursor: 'pointer',
   fontSize: '1rem',
+  transition: 'all 0.3s ease',
+};
+
+analyzeAnotherButtonStyle[':hover'] = {
+  backgroundColor: '#8BC3D9',
+  transform: 'translateY(-2px)',
 };
 
 const downloadReportButtonStyle = {
@@ -495,9 +562,25 @@ const downloadReportButtonStyle = {
   fontWeight: '600',
   cursor: 'pointer',
   fontSize: '1rem',
+  transition: 'all 0.3s ease',
 };
 
-// CSS Animation
+downloadReportButtonStyle[':hover'] = {
+  backgroundColor: '#D5D3D3',
+  transform: 'translateY(-2px)',
+};
+
+const ctaButtonStyle = {
+  backgroundColor: '#013D83',
+  color: 'white',
+  border: 'none',
+  padding: '12px 30px',
+  borderRadius: '8px',
+  fontWeight: '600',
+  cursor: 'pointer',
+  fontSize: '1rem',
+};
+
 const styles = `
   @keyframes spin {
     0% { transform: rotate(0deg); }
@@ -505,7 +588,6 @@ const styles = `
   }
 `;
 
-// Add the animation styles to the document
 const styleSheet = document.createElement('style');
 styleSheet.innerText = styles;
 document.head.appendChild(styleSheet);

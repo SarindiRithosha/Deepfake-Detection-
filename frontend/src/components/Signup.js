@@ -129,9 +129,8 @@ function Signup() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                      style={eyeButtonStyle}
-                    >
-                      {showPassword ? <FaEyeSlash /> : <FaEye />}
+                     style={eyeButtonStyle} >
+                      {showPassword ? <FaEyeSlash/>:<FaEye/>}
                   </button>
                 </div>
                 

@@ -8,12 +8,14 @@ import Results from './components/Results';
 import Login from './components/Login';
 import Signup from './components/Signup';
 import ForgotPassword from './components/ForgotPassword';
+import VerifyReset from './components/VerifyReset';
+import ResetPassword from './components/ResetPassword';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './index.css';
 
 function AppContent() {
   const location = useLocation();
-  const authRoutes = ['/login', '/signup', '/forgot-password'];
+  const authRoutes = ['/login', '/signup', '/forgot-password', '/verify-reset', '/reset-password'];
   const isAuthRoute = authRoutes.includes(location.pathname);
 
   return (
@@ -28,8 +30,8 @@ function AppContent() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
-
-
+          <Route path="/verify-reset" element={<VerifyReset />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
         </Routes>
       </main>
       {!isAuthRoute && <Footer />}

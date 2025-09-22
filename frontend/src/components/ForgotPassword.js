@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
+
 function ForgotPassword() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
@@ -24,7 +25,6 @@ function ForgotPassword() {
 
   return (
     <div style={pageStyle}>
-      {/* Minimal Header with Logo */}
       <header style={headerStyle}>
         <Link to="/" style={logoLinkStyle}>
           <img
@@ -36,7 +36,6 @@ function ForgotPassword() {
         </Link>
       </header>
 
-      {/* Forgot Password Form */}
       <main style={mainStyle}>
         <div style={containerStyle}>
           <div style={formContainerStyle}>

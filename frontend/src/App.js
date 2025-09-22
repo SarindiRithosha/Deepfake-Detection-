@@ -7,12 +7,13 @@ import Detection from './components/Detection';
 import Results from './components/Results'; 
 import Login from './components/Login';
 import Signup from './components/Signup';
+import ForgotPassword from './components/ForgotPassword';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './index.css';
 
 function AppContent() {
   const location = useLocation();
-  const authRoutes = ['/login', '/signup'];
+  const authRoutes = ['/login', '/signup', '/forgot-password'];
   const isAuthRoute = authRoutes.includes(location.pathname);
 
   return (
@@ -26,6 +27,8 @@ function AppContent() {
           <Route path="/results" element={<Results />} /> 
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+
 
         </Routes>
       </main>

@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './components/Home';
@@ -9,23 +9,32 @@ import Login from './components/Login';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './index.css';
 
+function AppContent() {
+  const location = useLocation();
+  const authRoutes = ['/login'];
+  const isAuthRoute = authRoutes.includes(location.pathname);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      {!isAuthRoute && <Navbar />}
+      <main style={{ flex: 1 }}>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/detect" element={<Detection />} />
+          <Route path="/results" element={<Results />} /> 
+          <Route path="/login" element={<Login />} />
+        </Routes>
+      </main>
+      {!isAuthRoute && <Footer />}
+    </div>
+  );
+}
+
 function App() {
   return (
     <Router>
-      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-        <Navbar />
-        <main style={{ flex: 1 }}>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/detect" element={<Detection />} />
-            <Route path="/results" element={<Results />} /> 
-            <Route path="/login" element={<Login />} />
-
-          </Routes>
-        </main>
-        <Footer />
-      </div>
+      <AppContent />
     </Router>
   );
 }

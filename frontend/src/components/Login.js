@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaEye, FaEyeSlash } from 'react-icons/fa'; 
+
 
 function Login() {
   const navigate = useNavigate();
@@ -16,7 +17,6 @@ function Login() {
       ...formData,
       [e.target.name]: e.target.value
     });
-    // Clear errors when user starts typing
     if (errors[e.target.name]) {
       setErrors({
         ...errors,
@@ -28,7 +28,6 @@ function Login() {
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    // Simple validation
     const newErrors = {};
     if (!formData.email) {
       newErrors.email = 'Email is required';
@@ -47,75 +46,93 @@ function Login() {
       return;
     }
 
-    // If validation passes, redirect to home (for now)
     navigate('/');
   };
 
   return (
     <div style={pageStyle}>
-      <div style={containerStyle}>
-        <div style={formContainerStyle}>
-          <h1 style={titleStyle}>Log In to Verity-X</h1>
-          <p style={subtitleStyle}>Access your past analysis reports and history.</p>
-          
-          <form onSubmit={handleSubmit} style={formStyle}>
-            <div style={inputGroupStyle}>
-              <label style={labelStyle}>Email Address</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                style={{
-                  ...inputStyle,
-                  borderColor: errors.email ? '#FF6B6B' : '#ddd'
-                }}
-                placeholder="Enter your email"
-              />
-              {errors.email && <span style={errorStyle}>{errors.email}</span>}
-            </div>
+      <header style={headerStyle}>
+        <Link to="/" style={logoLinkStyle}>
+          <img
+            src={process.env.PUBLIC_URL + "/verityx.png"}
+            alt="Verity-X Logo"
+            width="130"
+            height="40"
+          />
+        </Link>
+      </header>
 
-            <div style={inputGroupStyle}>
-              <label style={labelStyle}>Password</label>
-              <div style={passwordContainerStyle}>
+      {/* Login Form */}
+      <main style={mainStyle}>
+        <div style={containerStyle}>
+          <div style={formContainerStyle}>
+            <h1 style={titleStyle}>Log In to Verity-X</h1>
+            <p style={subtitleStyle}>Access your past analysis reports and history.</p>
+            
+            <form onSubmit={handleSubmit} style={formStyle}>
+              <div style={inputGroupStyle}>
+                <label style={labelStyle}>Email Address</label>
                 <input
-                  type={showPassword ? 'text' : 'password'}
-                  name="password"
-                  value={formData.password}
+                  type="email"
+                  name="email"
+                  value={formData.email}
                   onChange={handleChange}
                   style={{
                     ...inputStyle,
-                    borderColor: errors.password ? '#FF6B6B' : '#ddd',
-                    paddingRight: '40px'
+                    borderColor: errors.email ? '#FF6B6B' : '#ddd'
                   }}
-                  placeholder="Enter your password"
+                  placeholder="Enter your email"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={eyeButtonStyle}
-                >
-                  {showPassword ? <FaEyeSlash /> : <FaEye />}
-                </button>
+                {errors.email && <span style={errorStyle}>{errors.email}</span>}
               </div>
-              {errors.password && <span style={errorStyle}>{errors.password}</span>}
+
+              <div style={inputGroupStyle}>
+                <label style={labelStyle}>Password</label>
+                <div style={passwordContainerStyle}>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    style={{
+                      ...inputStyle,
+                      borderColor: errors.password ? '#FF6B6B' : '#ddd',
+                      paddingRight: '40px'
+                    }}
+                    placeholder="Enter your password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={eyeButtonStyle}
+                  >
+                    {showPassword ? <FaEyeSlash /> : <FaEye />}
+                  </button>
+                </div>
+                {errors.password && <span style={errorStyle}>{errors.password}</span>}
+              </div>
+
+              <button type="submit" style={submitButtonStyle}>
+                Log In
+              </button>
+            </form>
+
+            <div style={linksContainerStyle}>
+              <Link to="/forgot-password" style={linkStyle}>
+                Forgot Password?
+              </Link>
+              <p style={signupTextStyle}>
+                Don't have an account? <Link to="/signup" style={signupLinkStyle}>Sign Up</Link>
+              </p>
             </div>
-
-            <button type="submit" style={submitButtonStyle}>
-              Log In
-            </button>
-          </form>
-
-          <div style={linksContainerStyle}>
-            <Link to="/forgot-password" style={linkStyle}>
-              Forgot Password?
-            </Link>
-            <p style={signupTextStyle}>
-              Don't have an account? <Link to="/signup" style={signupLinkStyle}>Sign Up</Link>
-            </p>
           </div>
         </div>
-      </div>
+      </main>
+
+      {/* Minimal Footer */}
+      <footer style={footerStyle}>
+        <p style={footerTextStyle}>© 2025 Verity-X. All rights reserved.</p>
+      </footer>
     </div>
   );
 }
@@ -124,6 +141,21 @@ function Login() {
 const pageStyle = {
   backgroundColor: '#E5E3E3',
   minHeight: '100vh',
+  display: 'flex',
+  flexDirection: 'column'
+};
+
+const headerStyle = {
+  padding: '1.5rem 2rem',
+  backgroundColor: '#013D83'
+};
+
+const logoLinkStyle = {
+  textDecoration: 'none'
+};
+
+const mainStyle = {
+  flex: 1,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -243,6 +275,18 @@ const signupLinkStyle = {
   color: '#013D83',
   textDecoration: 'none',
   fontWeight: '600'
+};
+
+const footerStyle = {
+  backgroundColor: '#013D83',
+  padding: '1.5rem 2rem',
+  textAlign: 'center'
+};
+
+const footerTextStyle = {
+  color: 'white',
+  margin: '0',
+  fontSize: '0.9rem'
 };
 
 export default Login;

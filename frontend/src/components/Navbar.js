@@ -6,7 +6,6 @@ function Navbar() {
   return (
     <nav className="navbar navbar-expand-lg" style={navStyle}>
       <div className="container-fluid">
-        {/* Logo on the left */}
         <Link className="navbar-brand" to="/">
           <img 
             src={process.env.PUBLIC_URL + "/verityx.png"} 
@@ -17,7 +16,6 @@ function Navbar() {
           />
         </Link>
 
-        {/* This button is for toggling the menu on mobile screens */}
         <button 
           className="navbar-toggler" 
           type="button" 
@@ -30,7 +28,6 @@ function Navbar() {
           <span className="navbar-toggler-icon"></span>
         </button>
 
-        {/* Navigation Links and Login - aligned to the right */}
         <div className="collapse navbar-collapse justify-content-end" id="navbarNav">
           <ul className="navbar-nav">
             <li className="nav-item">
@@ -43,15 +40,14 @@ function Navbar() {
               <Link className="nav-link" to="/detect" style={linkStyle}>Detect</Link>
             </li>
             <li className="nav-item">
-              {/* Login Button with icon */}
-              <button className="btn btn-link nav-link" style={linkStyle}>
-                <img 
-                  src={process.env.PUBLIC_URL + "/user-interface (1).png"} 
-                  alt="Login" 
-                  width="24" 
-                  height="24" 
-                />
-              </button>
+               <Link to="/login" className="nav-link" style={linkStyle}>
+                  <img 
+                    src={process.env.PUBLIC_URL + "/user-interface (1).png"} 
+                    alt="Login" 
+                    width="24" 
+                    height="24" 
+                  />
+               </Link>
             </li>
           </ul>
         </div>
@@ -60,7 +56,6 @@ function Navbar() {
   );
 }
 
-// Inline CSS Styles
 const navStyle = {
   backgroundColor: '#013D83', 
   padding: '1.2rem 1rem',
@@ -73,5 +68,4 @@ const linkStyle = {
   textDecoration: 'none' 
 };
 
-// Make the component available to other files
 export default Navbar;

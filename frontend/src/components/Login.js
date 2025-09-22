@@ -1,0 +1,248 @@
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
+
+function Login() {
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
+  });
+  const [errors, setErrors] = useState({});
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+    // Clear errors when user starts typing
+    if (errors[e.target.name]) {
+      setErrors({
+        ...errors,
+        [e.target.name]: ''
+      });
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    // Simple validation
+    const newErrors = {};
+    if (!formData.email) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Incorrect Email Address';
+    }
+    
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Incorrect Password';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    // If validation passes, redirect to home (for now)
+    navigate('/');
+  };
+
+  return (
+    <div style={pageStyle}>
+      <div style={containerStyle}>
+        <div style={formContainerStyle}>
+          <h1 style={titleStyle}>Log In to Verity-X</h1>
+          <p style={subtitleStyle}>Access your past analysis reports and history.</p>
+          
+          <form onSubmit={handleSubmit} style={formStyle}>
+            <div style={inputGroupStyle}>
+              <label style={labelStyle}>Email Address</label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                style={{
+                  ...inputStyle,
+                  borderColor: errors.email ? '#FF6B6B' : '#ddd'
+                }}
+                placeholder="Enter your email"
+              />
+              {errors.email && <span style={errorStyle}>{errors.email}</span>}
+            </div>
+
+            <div style={inputGroupStyle}>
+              <label style={labelStyle}>Password</label>
+              <div style={passwordContainerStyle}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  style={{
+                    ...inputStyle,
+                    borderColor: errors.password ? '#FF6B6B' : '#ddd',
+                    paddingRight: '40px'
+                  }}
+                  placeholder="Enter your password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={eyeButtonStyle}
+                >
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
+              {errors.password && <span style={errorStyle}>{errors.password}</span>}
+            </div>
+
+            <button type="submit" style={submitButtonStyle}>
+              Log In
+            </button>
+          </form>
+
+          <div style={linksContainerStyle}>
+            <Link to="/forgot-password" style={linkStyle}>
+              Forgot Password?
+            </Link>
+            <p style={signupTextStyle}>
+              Don't have an account? <Link to="/signup" style={signupLinkStyle}>Sign Up</Link>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Styles
+const pageStyle = {
+  backgroundColor: '#E5E3E3',
+  minHeight: '100vh',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '2rem 1rem'
+};
+
+const containerStyle = {
+  width: '100%',
+  maxWidth: '400px'
+};
+
+const formContainerStyle = {
+  backgroundColor: '#F8F8F8',
+  borderRadius: '15px',
+  padding: '2.5rem',
+  boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)'
+};
+
+const titleStyle = {
+  color: '#013D83',
+  fontSize: '2rem',
+  fontWeight: '700',
+  textAlign: 'center',
+  marginBottom: '0.5rem'
+};
+
+const subtitleStyle = {
+  color: '#747474',
+  textAlign: 'center',
+  marginBottom: '2rem',
+  fontSize: '1rem'
+};
+
+const formStyle = {
+  width: '100%'
+};
+
+const inputGroupStyle = {
+  marginBottom: '1.5rem'
+};
+
+const labelStyle = {
+  color: '#747474',
+  fontWeight: '600',
+  display: 'block',
+  marginBottom: '0.5rem',
+  fontSize: '0.9rem'
+};
+
+const inputStyle = {
+  width: '100%',
+  padding: '12px 15px',
+  border: '1px solid #ddd',
+  borderRadius: '8px',
+  fontSize: '1rem',
+  boxSizing: 'border-box',
+  transition: 'border-color 0.3s ease'
+};
+
+const passwordContainerStyle = {
+  position: 'relative'
+};
+
+const eyeButtonStyle = {
+  position: 'absolute',
+  right: '10px',
+  top: '50%',
+  transform: 'translateY(-50%)',
+  background: 'none',
+  border: 'none',
+  cursor: 'pointer',
+  fontSize: '1.2rem',
+  color: '#747474'
+};
+
+const errorStyle = {
+  color: '#FF6B6B',
+  fontSize: '0.8rem',
+  marginTop: '0.25rem',
+  display: 'block'
+};
+
+const submitButtonStyle = {
+  backgroundColor: '#013D83',
+  color: 'white',
+  border: 'none',
+  padding: '12px',
+  borderRadius: '8px',
+  fontSize: '1.1rem',
+  fontWeight: '600',
+  cursor: 'pointer',
+  width: '100%',
+  marginTop: '1rem',
+  transition: 'background-color 0.3s ease'
+};
+
+const linksContainerStyle = {
+  textAlign: 'center',
+  marginTop: '2rem'
+};
+
+const linkStyle = {
+  color: '#747373ff',
+  textDecoration: 'none',
+  fontSize: '0.9rem',
+  display: 'block',
+  marginBottom: '1rem'
+};
+
+const signupTextStyle = {
+  color: '#747373ff',
+  fontSize: '0.9rem',
+  margin: '0'
+};
+
+const signupLinkStyle = {
+  color: '#013D83',
+  textDecoration: 'none',
+  fontWeight: '600'
+};
+
+export default Login;

@@ -4,7 +4,8 @@ import Footer from './components/Footer';
 import Home from './components/Home';
 import About from './components/About';
 import Detection from './components/Detection';
-import Results from './components/Results'; // Import the Results component
+import Results from './components/Results'; 
+import Login from './components/Login';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './index.css';
 
@@ -18,7 +19,9 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/about" element={<About />} />
             <Route path="/detect" element={<Detection />} />
-            <Route path="/results" element={<Results />} /> {/* Add Results route */}
+            <Route path="/results" element={<Results />} /> 
+            <Route path="/login" element={<Login />} />
+
           </Routes>
         </main>
         <Footer />

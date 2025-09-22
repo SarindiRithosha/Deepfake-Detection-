@@ -6,12 +6,13 @@ import About from './components/About';
 import Detection from './components/Detection';
 import Results from './components/Results'; 
 import Login from './components/Login';
+import Signup from './components/Signup';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './index.css';
 
 function AppContent() {
   const location = useLocation();
-  const authRoutes = ['/login'];
+  const authRoutes = ['/login', '/signup'];
   const isAuthRoute = authRoutes.includes(location.pathname);
 
   return (
@@ -24,6 +25,8 @@ function AppContent() {
           <Route path="/detect" element={<Detection />} />
           <Route path="/results" element={<Results />} /> 
           <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+
         </Routes>
       </main>
       {!isAuthRoute && <Footer />}

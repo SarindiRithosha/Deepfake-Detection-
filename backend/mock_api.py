@@ -105,14 +105,12 @@ async def root():
 async def analyze_video(file: UploadFile = File(...)):
     """Analyze video for deepfake detection"""
     try:
-        # Validate file type
+        # Validate file type and size as before
         allowed_extensions = {'.mp4', '.mov', '.avi'}
         file_extension = os.path.splitext(file.filename)[1].lower()
-        
         if file_extension not in allowed_extensions:
-            raise HTTPException(status_code=400, detail="Invalid file format. Supported formats: .mp4, .mov, .avi")
+            raise HTTPException(status_code=400, detail="Invalid file format.")
         
-        # Validate file size (200MB max)
         file_content = await file.read()
         if len(file_content) > 200 * 1024 * 1024:
             raise HTTPException(status_code=400, detail="File size exceeds 200MB limit")
@@ -122,35 +120,50 @@ async def analyze_video(file: UploadFile = File(...)):
             tmp_file.write(file_content)
             temp_file_path = tmp_file.name
         
-        # Simulate processing time
-        import time
-        time.sleep(2)
+        # --- NEW LOGIC: Extract real frames from the video ---
+        frame_analysis = []
+        cap = cv2.VideoCapture(temp_file_path)
+        frame_rate = int(cap.get(cv2.CAP_PROP_FPS))
+        frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         
-        # Generate random verdict (50/50 chance for demo)
+        # Extract frames at a specific interval (e.g., every 1 second)
+        target_frames = [i * frame_rate for i in range(1, min(11, int(frame_count / frame_rate) + 1))]
+
+        for i in range(frame_count):
+            ret, frame = cap.read()
+            if not ret:
+                break
+            
+            if i in target_frames:
+                # Convert OpenCV frame (BGR) to PIL Image (RGB)
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                pil_image = Image.fromarray(frame_rgb)
+                
+                # Resize for thumbnails if needed (optional)
+                pil_image.thumbnail((300, 200))
+
+                # Convert to Base64
+                buffered = io.BytesIO()
+                pil_image.save(buffered, format="JPEG", quality=90)
+                original_b64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
+                
+                # Use your existing heatmap function for the mockup
+                heatmap = generate_heatmap(pil_image.width, pil_image.height, random.choice([True, False]))
+                buffered_heat = io.BytesIO()
+                heatmap.save(buffered_heat, format="JPEG", quality=90)
+                heatmap_b64 = base64.b64encode(buffered_heat.getvalue()).decode('utf-8')
+
+                frame_analysis.append({
+                    "frame_number": i,
+                    "original_frame": f"data:image/jpeg;base64,{original_b64}",
+                    "heatmap": f"data:image/jpeg;base64,{heatmap_b64}",
+                    "suspicious_score": round(random.uniform(0.7, 0.95), 2)
+                })
+
+        cap.release()
+
         is_fake = random.choice([True, False])
         confidence = round(random.uniform(0.85, 0.99), 2)
-        
-        # Generate mock analysis data
-        frame_analysis = []
-        for i in range(10):  # 10 frames for analysis
-            original_frame = generate_realistic_frame(300, 200, is_fake)
-            heatmap = generate_heatmap(300, 200, is_fake)
-            
-            # Convert to base64
-            buffered = io.BytesIO()
-            original_frame.save(buffered, format="JPEG", quality=90)
-            original_b64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
-            
-            buffered_heat = io.BytesIO()
-            heatmap.save(buffered_heat, format="JPEG", quality=90)
-            heatmap_b64 = base64.b64encode(buffered_heat.getvalue()).decode('utf-8')
-            
-            frame_analysis.append({
-                "frame_number": i,
-                "original_frame": f"data:image/jpeg;base64,{original_b64}",
-                "heatmap": f"data:image/jpeg;base64,{heatmap_b64}",
-                "suspicious_score": round(random.uniform(0.7, 0.95), 2) if is_fake else round(random.uniform(0.1, 0.3), 2)
-            })
         
         # Create detailed analysis report
         if is_fake:

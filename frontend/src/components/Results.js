@@ -222,8 +222,8 @@ function Results() {
             <img
               src={process.env.PUBLIC_URL + "/warning.png"}
               alt="Warning"
-              width="16"
-              height="16"
+              width="20"
+              height="20"
               style={{ marginRight: '8px' }}
             />
             <span style={explanationTextStyle}>
@@ -369,8 +369,9 @@ const thumbnailContainerStyle = {
   overflowX: 'auto',
   gap: '1rem',
   padding: '1rem',
-  backgroundColor: '#F8F8F8',
+  backgroundColor: '#E5E3E3',
   borderRadius: '10px',
+  marginLeft: '23px',
 };
 
 const thumbnailStyle = {
@@ -408,6 +409,9 @@ const heatmapContainerStyle = {
   padding: '2rem',
   marginBottom: '3rem',
   width: '100%',
+  maxWidth: '900px',
+  marginLeft: 'auto',
+  marginRight: 'auto',
 };
 
 const heatmapHeaderStyle = {
@@ -449,12 +453,14 @@ const selectedFrameContainerStyle = {
 
 const imageWrapperStyle = {
   position: 'relative',
-  maxWidth: '100%',
+  width: '800px', 
+  height: '400px',
 };
 
 const selectedImageStyle = {
-  maxWidth: '100%',
-  maxHeight: '400px',
+  width: '100%', 
+  height: '100%', 
+  objectFit: 'cover',
   borderRadius: '8px',
   border: '2px solid #ddd',
 };
@@ -488,7 +494,9 @@ const summaryContainerStyle = {
   borderRadius: '15px',
   padding: '2rem',
   marginBottom: '3rem',
-  width: '100%',
+  width: '70%',
+  marginLeft: 'auto',
+  marginRight: 'auto',
 };
 
 const summaryTitleStyle = {

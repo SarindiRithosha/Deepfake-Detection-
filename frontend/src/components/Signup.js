@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { FaEye, FaEyeSlash } from 'react-icons/fa'; 
-
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import { useAuth } from '../contexts/AuthContext';
 
 function Signup() {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -13,6 +14,16 @@ function Signup() {
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [showVerification, setShowVerification] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [otpEmail, setOtpEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  // Redirect if already logged in
+  React.useEffect(() => {
+    if (currentUser) {
+      navigate('/');
+    }
+  }, [currentUser, navigate]);
 
   const getPasswordStrength = (password) => {
     if (password.length === 0) return { strength: 0, label: '' };
@@ -36,11 +47,12 @@ function Signup() {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     
     const newErrors = {};
-    if (!formData.name) newErrors.name = 'Name is required';
+    if (!formData.name.trim()) newErrors.name = 'Name is required';
     if (!formData.email) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
@@ -54,15 +66,93 @@ function Signup() {
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      setLoading(false);
       return;
     }
 
-    setShowVerification(true);
+    try {
+      const response = await fetch('http://localhost:8000/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setOtpEmail(formData.email);
+        setShowVerification(true);
+        setErrors({});
+      } else {
+        setErrors({ submit: data.detail });
+      }
+    } catch (error) {
+      setErrors({ submit: 'Network error. Please try again.' });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleVerification = (e) => {
+  const handleVerification = async (e) => {
     e.preventDefault();
-    navigate('/login');
+    setLoading(true);
+
+    if (verificationCode.length !== 6) {
+      setErrors({ otp: 'Please enter 6-digit code' });
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:8000/auth/verify-signup-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: otpEmail,
+          code: verificationCode
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert('Registration successful! Please login with your credentials.');
+        navigate('/login');
+      } else {
+        setErrors({ otp: data.detail });
+      }
+    } catch (error) {
+      setErrors({ otp: 'Verification failed. Please try again.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/auth/resend-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: otpEmail })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert('New OTP sent to your email!');
+        setErrors({});
+      } else {
+        alert('Failed to resend OTP. Please try again.');
+      }
+    } catch (error) {
+      alert('Network error. Please try again.');
+    }
   };
 
   return (
@@ -85,6 +175,8 @@ function Signup() {
           <div style={formContainerStyle}>
             <h1 style={titleStyle}>Create Your<br />Verity-X Account</h1>
             
+            {errors.submit && <div style={errorAlertStyle}>{errors.submit}</div>}
+            
             <form onSubmit={handleSubmit} style={formStyle}>
               <div style={inputGroupStyle}>
                 <label style={labelStyle}>Full Name</label>
@@ -93,7 +185,10 @@ function Signup() {
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  style={inputStyle}
+                  style={{
+                    ...inputStyle,
+                    borderColor: errors.name ? '#FF6B6B' : '#ddd'
+                  }}
                   placeholder="Enter your full name"
                 />
                 {errors.name && <span style={errorStyle}>{errors.name}</span>}
@@ -106,7 +201,10 @@ function Signup() {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  style={inputStyle}
+                  style={{
+                    ...inputStyle,
+                    borderColor: errors.email ? '#FF6B6B' : '#ddd'
+                  }}
                   placeholder="Enter your email"
                 />
                 {errors.email && <span style={errorStyle}>{errors.email}</span>}
@@ -122,7 +220,8 @@ function Signup() {
                     onChange={handleChange}
                     style={{
                       ...inputStyle,
-                      paddingRight: '40px'
+                      paddingRight: '40px',
+                      borderColor: errors.password ? '#FF6B6B' : '#ddd'
                     }}
                     placeholder="Create a password"
                   />
@@ -158,8 +257,8 @@ function Signup() {
                 {errors.password && <span style={errorStyle}>{errors.password}</span>}
               </div>
 
-              <button type="submit" style={submitButtonStyle}>
-                Create Account
+              <button type="submit" disabled={loading} style={submitButtonStyle}>
+                {loading ? 'Sending OTP...' : 'Create Account'}
               </button>
             </form>
 
@@ -185,9 +284,11 @@ function Signup() {
             />
             <h2 style={popupTitleStyle}>Verify Your Email</h2>
             <p style={popupTextStyle}>
-              We've sent a 6-digit code to your email address.<br />
-              Enter it below to verify your account.
+              We've sent a 6-digit code to <strong>{otpEmail}</strong>.<br />
+              Enter it below to verify your account. The code expires in <strong>2 minutes</strong>.
             </p>
+            
+            {errors.otp && <div style={errorAlertStyle}>{errors.otp}</div>}
             
             <form onSubmit={handleVerification} style={formStyle}>
               <div style={inputGroupStyle}>
@@ -195,19 +296,30 @@ function Signup() {
                 <input
                   type="text"
                   maxLength="6"
-                  style={inputStyle}
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+                  style={{
+                    ...inputStyle,
+                    borderColor: errors.otp ? '#FF6B6B' : '#ddd'
+                  }}
                   placeholder="Enter 6-digit code"
                 />
               </div>
 
-              <button type="submit" style={submitButtonStyle}>
-                Verify
+              <button type="submit" disabled={loading} style={submitButtonStyle}>
+                {loading ? 'Verifying...' : 'Verify'}
               </button>
             </form>
 
             <div style={linksContainerStyle}>
               <p style={resendTextStyle}>
-                Didn't receive the code? <button style={resendLinkStyle}>Resend</button>
+                Didn't receive the code? <button 
+                  type="button" 
+                  onClick={handleResendOtp} 
+                  style={resendLinkStyle}
+                >
+                  Resend
+                </button>
               </p>
             </div>
           </div>
@@ -221,6 +333,16 @@ function Signup() {
     </div>
   );
 }
+
+const errorAlertStyle = {
+  backgroundColor: '#FFE6E6',
+  color: '#D8000C',
+  padding: '10px',
+  borderRadius: '5px',
+  marginBottom: '1rem',
+  fontSize: '0.9rem',
+  textAlign: 'center'
+};
 
 const pageStyle = {
   backgroundColor: '#E5E3E3',

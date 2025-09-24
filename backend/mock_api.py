@@ -2,6 +2,8 @@ from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from PIL import Image, ImageDraw, ImageFilter
+from auth_router import router as auth_router
+from firebase_config import initialize_firebase
 import numpy as np
 import cv2
 import random
@@ -18,11 +20,17 @@ app = FastAPI(title="Verity-X API", version="1.0.0")
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000", "http://localhost:3001"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Initialize Firebase
+initialize_firebase()
+
+# Include routers
+app.include_router(auth_router)
 
 def generate_realistic_frame(width: int, height: int, is_fake: bool = True) -> Image.Image:
     """Generate a realistic-looking video frame using OpenCV and PIL"""
@@ -100,6 +108,15 @@ def generate_heatmap(width: int, height: int, is_fake: bool = True) -> Image.Ima
 @app.get("/")
 async def root():
     return {"message": "Verity-X API is running", "version": "1.0.0"}
+
+@app.get("/health")
+async def health_check():
+    from firebase_config import firebase_app
+    return {
+        "status": "healthy", 
+        "firebase_initialized": firebase_app is not None,
+        "timestamp": "2025-01-24T00:00:00Z"
+    }
 
 @app.post("/analyze")
 async def analyze_video(file: UploadFile = File(...)):

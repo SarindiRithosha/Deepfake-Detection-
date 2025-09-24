@@ -118,7 +118,6 @@ function Navbar() {
                       >
                         Analysis History
                       </Link>
-                      <hr style={dropdownDividerStyle} />
                       <button 
                         className="dropdown-item" 
                         onClick={handleLogout}

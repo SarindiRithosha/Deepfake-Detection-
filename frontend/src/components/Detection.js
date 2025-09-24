@@ -1,15 +1,27 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 
 function Detection() {
   const [file, setFile] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [status, setStatus] = useState('idle');
+  const [showLimitModal, setShowLimitModal] = useState(false);
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
+  const { currentUser, uploadCount, incrementUploadCount, canUpload, getUploadLimit } = useAuth();
+
+  const maxUploads = getUploadLimit();
+  const remaining = maxUploads - uploadCount;
 
   const handleFileChange = async (selectedFile) => {
+    // Check upload limit before proceeding
+    if (!canUpload()) {
+      setShowLimitModal(true);
+      return;
+    }
+
     // Validate file type
     const allowedFormats = ['.mp4', '.mov', '.avi'];
     const fileExtension = selectedFile.name.substring(selectedFile.name.lastIndexOf('.')).toLowerCase();
@@ -46,6 +58,9 @@ function Detection() {
         timeout: 300000,
       });
 
+      // Increment upload count on successful upload
+      await incrementUploadCount();
+      
       setStatus('processing');
       
       setTimeout(() => {
@@ -105,6 +120,27 @@ function Detection() {
       <div style={headerStyle}>
         <h1 style={titleStyle}>Upload Your Video for Analysis</h1>
         <p style={subtitleStyle}>Upload your video file and let our AI detect deepfake content</p>
+      </div>
+
+      {/* Upload Limit Info */}
+      <div style={uploadLimitInfoStyle}>
+        <strong>Upload Status:</strong> {uploadCount}/{maxUploads} videos analyzed
+        <br />
+        <strong>Remaining:</strong> {remaining} upload{remaining !== 1 ? 's' : ''}
+        
+        {!currentUser && (
+          <div style={{ marginTop: '10px' }}>
+            <small>
+              Unregistered users are limited to 3 uploads. 
+              <button 
+                onClick={() => navigate('/login')}
+                style={loginPromptStyle}
+              >
+                Login for unlimited uploads
+              </button>
+            </small>
+          </div>
+        )}
       </div>
 
       <div style={containerStyle}>
@@ -200,6 +236,35 @@ function Detection() {
           </p>
         )}
       </div>
+
+      {/* Upload Limit Modal */}
+      {showLimitModal && (
+        <div style={modalOverlayStyle}>
+          <div style={modalStyle}>
+            <h3>Upload Limit Reached</h3>
+            <p>You have reached the maximum of {maxUploads} uploads.</p>
+            {!currentUser ? (
+              <>
+                <p>Please login or register to continue using Verity-X.</p>
+                <button 
+                  onClick={() => navigate('/login')}
+                  style={modalButtonStyle}
+                >
+                  Login Now
+                </button>
+              </>
+            ) : (
+              <p>Please contact support if you need more uploads.</p>
+            )}
+            <button 
+              onClick={() => setShowLimitModal(false)}
+              style={cancelButtonStyle}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -232,6 +297,29 @@ const subtitleStyle = {
   color: '#000',
   fontSize: '1.1rem',
   opacity: '0.8',
+};
+
+// New styles for upload limit info
+const uploadLimitInfoStyle = {
+  backgroundColor: '#f8f9fa',
+  padding: '15px',
+  borderRadius: '8px',
+  margin: '0 0 20px 0',
+  borderLeft: '4px solid #013D83',
+  width: '100%',
+  maxWidth: '900px',
+  textAlign: 'center'
+};
+
+const loginPromptStyle = {
+  backgroundColor: '#013D83',
+  color: 'white',
+  border: 'none',
+  padding: '5px 10px',
+  borderRadius: '3px',
+  marginLeft: '10px',
+  cursor: 'pointer',
+  fontSize: '0.8rem'
 };
 
 const containerStyle = {
@@ -286,11 +374,6 @@ const chooseFileButtonStyle = {
   fontSize: '1rem',
   cursor: 'pointer',
   transition: 'all 0.3s ease',
-};
-
-chooseFileButtonStyle[':hover'] = {
-  transform: 'translateY(-2px)',
-  boxShadow: '0 5px 15px rgba(0,0,0,0.2)',
 };
 
 const uploadingStyle = {
@@ -414,6 +497,49 @@ const supportedTextStyle = {
   textAlign: 'center',
   marginTop: '2rem',
   fontSize: '0.9rem',
+};
+
+// Modal styles
+const modalOverlayStyle = {
+  position: 'fixed',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: 'rgba(0,0,0,0.5)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  zIndex: 1000
+};
+
+const modalStyle = {
+  backgroundColor: 'white',
+  padding: '2rem',
+  borderRadius: '10px',
+  maxWidth: '400px',
+  width: '90%',
+  textAlign: 'center'
+};
+
+const modalButtonStyle = {
+  backgroundColor: '#013D83',
+  color: 'white',
+  border: 'none',
+  padding: '10px 20px',
+  borderRadius: '5px',
+  margin: '5px',
+  cursor: 'pointer'
+};
+
+const cancelButtonStyle = {
+  backgroundColor: '#6c757d',
+  color: 'white',
+  border: 'none',
+  padding: '10px 20px',
+  borderRadius: '5px',
+  margin: '5px',
+  cursor: 'pointer'
 };
 
 const styles = `

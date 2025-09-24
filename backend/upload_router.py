@@ -27,7 +27,7 @@ async def get_upload_limit(authorization: Optional[str] = Header(None)):
                 
                 if user_data.exists:
                     data = user_data.to_dict()
-                    max_uploads = data.get("max_uploads", 50)
+                    max_uploads = data.get("max_uploads", 250)
                     current_count = data.get("analysis_count", 0)
                     return {
                         "max_uploads": max_uploads,
@@ -38,7 +38,7 @@ async def get_upload_limit(authorization: Optional[str] = Header(None)):
                     }
         
         # Unregistered user or invalid token
-        unregistered_count = 0  # You might want to track this via session
+        unregistered_count = 0  
         return {
             "max_uploads": 3,
             "current_count": unregistered_count,

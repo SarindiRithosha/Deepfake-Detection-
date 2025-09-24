@@ -1,16 +1,26 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { FaEye, FaEyeSlash } from 'react-icons/fa'; 
-
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import { loginUser } from '../firebase';
+import { useAuth } from '../contexts/AuthContext';
 
 function Login() {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // Redirect if already logged in
+  React.useEffect(() => {
+    if (currentUser) {
+      navigate('/');
+    }
+  }, [currentUser, navigate]);
 
   const handleChange = (e) => {
     setFormData({
@@ -25,8 +35,9 @@ function Login() {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     
     const newErrors = {};
     if (!formData.email) {
@@ -37,16 +48,31 @@ function Login() {
     
     if (!formData.password) {
       newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Incorrect Password';
     }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      setLoading(false);
       return;
     }
 
-    navigate('/');
+    try {
+      await loginUser(formData.email, formData.password);
+      navigate('/');
+    } catch (error) {
+      console.error('Login error:', error);
+      if (error.code === 'auth/invalid-credential') {
+        setErrors({ submit: 'Invalid email or password' });
+      } else if (error.code === 'auth/user-not-found') {
+        setErrors({ submit: 'No account found with this email' });
+      } else if (error.code === 'auth/wrong-password') {
+        setErrors({ submit: 'Incorrect password' });
+      } else {
+        setErrors({ submit: 'Login failed. Please try again.' });
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -68,6 +94,8 @@ function Login() {
           <div style={formContainerStyle}>
             <h1 style={titleStyle}>Log In to Verity-X</h1>
             <p style={subtitleStyle}>Access your past analysis reports and history.</p>
+            
+            {errors.submit && <div style={errorAlertStyle}>{errors.submit}</div>}
             
             <form onSubmit={handleSubmit} style={formStyle}>
               <div style={inputGroupStyle}>
@@ -104,16 +132,16 @@ function Login() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    style={eyeButtonStyle}
-                  >
-                    {showPassword ? <FaEyeSlash /> : <FaEye />}
+                    style={eyeButtonStyle}
+                  >
+                    {showPassword ? <FaEyeSlash/> : <FaEye/>}
                   </button>
                 </div>
                 {errors.password && <span style={errorStyle}>{errors.password}</span>}
               </div>
 
-              <button type="submit" style={submitButtonStyle}>
-                Log In
+              <button type="submit" disabled={loading} style={submitButtonStyle}>
+                {loading ? 'Logging In...' : 'Log In'}
               </button>
             </form>
 
@@ -137,7 +165,16 @@ function Login() {
   );
 }
 
-// Styles
+const errorAlertStyle = {
+  backgroundColor: '#FFE6E6',
+  color: '#D8000C',
+  padding: '10px',
+  borderRadius: '5px',
+  marginBottom: '1rem',
+  fontSize: '0.9rem',
+  textAlign: 'center'
+};
+
 const pageStyle = {
   backgroundColor: '#E5E3E3',
   minHeight: '100vh',

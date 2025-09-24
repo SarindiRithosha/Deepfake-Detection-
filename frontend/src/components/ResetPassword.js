@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa'; 
-
 
 function ResetPassword() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [formData, setFormData] = useState({
     password: '',
     confirmPassword: ''
@@ -12,6 +12,16 @@ function ResetPassword() {
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState('');
+
+  useEffect(() => {
+    if (location.state?.email) {
+      setEmail(location.state.email);
+    } else {
+      navigate('/forgot-password');
+    }
+  }, [location, navigate]);
 
   const getPasswordStrength = (password) => {
     if (password.length === 0) return { strength: 0, label: '' };
@@ -35,8 +45,9 @@ function ResetPassword() {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     
     const newErrors = {};
     if (!formData.password) {
@@ -53,16 +64,40 @@ function ResetPassword() {
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      setLoading(false);
       return;
     }
 
-    // Redirect to login page
-    navigate('/login');
+    try {
+      const response = await fetch('http://localhost:8000/auth/reset-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email,
+          new_password: formData.password
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert('Password reset successfully! Please login with your new password.');
+        navigate('/login');
+      } else {
+        setErrors({ submit: data.detail });
+      }
+    } catch (error) {
+      setErrors({ submit: 'Password reset failed. Please try again.' });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div style={pageStyle}>
-    <header style={headerStyle}>
+      <header style={headerStyle}>
         <Link to="/" style={logoLinkStyle}>
           <img
             src={process.env.PUBLIC_URL + "/verityx.png"}
@@ -74,98 +109,118 @@ function ResetPassword() {
       </header>
 
       <main style={mainStyle}>
-      <div style={containerStyle}>
-        <div style={formContainerStyle}>
-          <h1 style={titleStyle}>Reset Your Password</h1>
-          
-          <form onSubmit={handleSubmit} style={formStyle}>
-            <div style={inputGroupStyle}>
-              <label style={labelStyle}>New Password</label>
-              <div style={passwordContainerStyle}>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  style={{
-                    ...inputStyle,
-                    paddingRight: '40px',
-                    borderColor: errors.password ? '#FF6B6B' : '#ddd'
-                  }}
-                  placeholder="Enter new password"
-                />
-                <button
-                  type="button"
+        <div style={containerStyle}>
+          <div style={formContainerStyle}>
+            <h1 style={titleStyle}>Reset Your Password</h1>
+            
+            {errors.submit && <div style={errorAlertStyle}>{errors.submit}</div>}
+            
+            <form onSubmit={handleSubmit} style={formStyle}>
+              <div style={inputGroupStyle}>
+                <label style={labelStyle}>New Password</label>
+                <div style={passwordContainerStyle}>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    style={{
+                      ...inputStyle,
+                      paddingRight: '40px',
+                      borderColor: errors.password ? '#FF6B6B' : '#ddd'
+                    }}
+                    placeholder="Enter new password"
+                  />
+                  <button
+                    type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                        style={eyeButtonStyle}>
+                    style={eyeButtonStyle}>
                     {showPassword ? <FaEyeSlash />:<FaEye/>}
-                </button>
-              </div>
-              
-              {/* Password Strength Indicator */}
-              {formData.password && (
-                <div style={strengthContainerStyle}>
-                  <div style={strengthBarStyle}>
-                    <div style={{
-                      ...strengthFillStyle,
-                      width: `${(passwordStrength.strength / 3) * 100}%`,
-                      backgroundColor: passwordStrength.strength === 1 ? '#FF6B6B' : 
-                                      passwordStrength.strength === 2 ? '#FFD166' : '#06D6A0'
-                    }}></div>
-                  </div>
-                  <span style={{
-                    ...strengthTextStyle,
-                    color: passwordStrength.strength === 1 ? '#FF6B6B' : 
-                           passwordStrength.strength === 2 ? '#FFD166' : '#06D6A0'
-                  }}>
-                    {passwordStrength.label}
-                  </span>
+                  </button>
                 </div>
-              )}
-              
-              {errors.password && <span style={errorStyle}>{errors.password}</span>}
-            </div>
+                
+                {/* Password Strength Indicator */}
+                {formData.password && (
+                  <div style={strengthContainerStyle}>
+                    <div style={strengthBarStyle}>
+                      <div style={{
+                        ...strengthFillStyle,
+                        width: `${(passwordStrength.strength / 3) * 100}%`,
+                        backgroundColor: passwordStrength.strength === 1 ? '#FF6B6B' : 
+                                        passwordStrength.strength === 2 ? '#FFD166' : '#06D6A0'
+                      }}></div>
+                    </div>
+                    <span style={{
+                      ...strengthTextStyle,
+                      color: passwordStrength.strength === 1 ? '#FF6B6B' : 
+                             passwordStrength.strength === 2 ? '#FFD166' : '#06D6A0'
+                    }}>
+                      {passwordStrength.label}
+                    </span>
+                  </div>
+                )}
+                
+                {errors.password && <span style={errorStyle}>{errors.password}</span>}
+              </div>
 
-            <div style={inputGroupStyle}>
-              <label style={labelStyle}>Confirm Password</label>
-              <div style={passwordContainerStyle}>
-                <input
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  style={{
-                    ...inputStyle,
-                    paddingRight: '40px',
-                    borderColor: errors.confirmPassword ? '#FF6B6B' : '#ddd'
-                  }}
-                  placeholder="Confirm new password"
-                />
-                <button
-                  type="button"
+              <div style={inputGroupStyle}>
+                <label style={labelStyle}>Confirm Password</label>
+                <div style={passwordContainerStyle}>
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    style={{
+                      ...inputStyle,
+                      paddingRight: '40px',
+                      borderColor: errors.confirmPassword ? '#FF6B6B' : '#ddd'
+                    }}
+                    placeholder="Confirm new password"
+                  />
+                  <button
+                    type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}                    
                     style={eyeButtonStyle}>
                     {showConfirmPassword ? <FaEyeSlash />:<FaEye/>}
-                </button>
+                  </button>
+                </div>
+                {errors.confirmPassword && <span style={errorStyle}>{errors.confirmPassword}</span>}
               </div>
-              {errors.confirmPassword && <span style={errorStyle}>{errors.confirmPassword}</span>}
-            </div>
 
-            <button type="submit" style={submitButtonStyle}>
-              Change Password
-            </button>
-          </form>
+              <button type="submit" disabled={loading} style={submitButtonStyle}>
+                {loading ? 'Resetting Password...' : 'Change Password'}
+              </button>
+            </form>
+
+            <div style={linksContainerStyle}>
+              <p style={loginTextStyle}>
+                Remember your password? <Link to="/login" style={loginLinkStyle}>Log In</Link>
+              </p>
+            </div>
+          </div>
         </div>
-      </div>
       </main>
-         <footer style={footerStyle}>
-            <p style={footerTextStyle}>© 2025 Verity-X. All rights reserved.</p>
-        </footer>
+
+      <footer style={footerStyle}>
+        <p style={footerTextStyle}>© 2025 Verity-X. All rights reserved.</p>
+      </footer>
     </div>
   );
 }
 
-// Reuse styles from previous components
+// Add error alert style to your existing styles
+const errorAlertStyle = {
+  backgroundColor: '#FFE6E6',
+  color: '#D8000C',
+  padding: '10px',
+  borderRadius: '5px',
+  marginBottom: '1rem',
+  fontSize: '0.9rem',
+  textAlign: 'center'
+};
+
+// Your existing styles remain exactly the same:
 const pageStyle = {
   backgroundColor: '#E5E3E3',
   minHeight: '100vh',
@@ -189,6 +244,7 @@ const mainStyle = {
   justifyContent: 'center',
   padding: '2rem 1rem'
 };
+
 const containerStyle = {
   width: '100%',
   maxWidth: '400px'
@@ -291,6 +347,23 @@ const strengthFillStyle = {
 
 const strengthTextStyle = {
   fontSize: '0.8rem',
+  fontWeight: '600'
+};
+
+const linksContainerStyle = {
+  textAlign: 'center',
+  marginTop: '2rem'
+};
+
+const loginTextStyle = {
+  color: '#747373ff',
+  fontSize: '0.9rem',
+  margin: '0'
+};
+
+const loginLinkStyle = {
+  color: '#013D83',
+  textDecoration: 'none',
   fontWeight: '600'
 };
 

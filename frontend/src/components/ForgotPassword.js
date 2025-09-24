@@ -1,26 +1,49 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
-
 function ForgotPassword() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     
     if (!email) {
       setError('Email is required');
+      setLoading(false);
       return;
     }
     
     if (!/\S+@\S+\.\S+/.test(email)) {
       setError('Incorrect Email Address');
+      setLoading(false);
       return;
     }
 
-    navigate('/verify-reset');
+    try {
+      const response = await fetch('http://localhost:8000/auth/forgot-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        navigate('/verify-reset', { state: { email } });
+      } else {
+        setError(data.detail);
+      }
+    } catch (error) {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -61,8 +84,8 @@ function ForgotPassword() {
                 {error && <span style={errorStyle}>{error}</span>}
               </div>
 
-              <button type="submit" style={submitButtonStyle}>
-                Send Code
+              <button type="submit" disabled={loading} style={submitButtonStyle}>
+                {loading ? 'Sending OTP...' : 'Send Code'}
               </button>
             </form>
 
@@ -83,7 +106,6 @@ function ForgotPassword() {
   );
 }
 
-// Reuse the same styles from Login component
 const pageStyle = {
   backgroundColor: '#E5E3E3',
   minHeight: '100vh',

@@ -1,8 +1,41 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
-// Navbar functional component
 function Navbar() {
+  const { currentUser, logout } = useAuth();
+  const navigate = useNavigate();
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/');
+      setShowDropdown(false);
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
+  const handleDropdownToggle = () => {
+    setShowDropdown(!showDropdown);
+  };
+
   return (
     <nav className="navbar navbar-expand-lg" style={navStyle}>
       <div className="container-fluid">
@@ -39,15 +72,62 @@ function Navbar() {
             <li className="nav-item">
               <Link className="nav-link" to="/detect" style={linkStyle}>Detect</Link>
             </li>
-            <li className="nav-item">
-               <Link to="/login" className="nav-link" style={linkStyle}>
+            <li className="nav-item dropdown" ref={dropdownRef}>
+              {currentUser ? (
+                <div className="nav-item dropdown">
+                  <button 
+                    className="nav-link dropdown-toggle d-flex align-items-center" 
+                    style={{...linkStyle, background: 'none', border: 'none'}}
+                    onClick={handleDropdownToggle}
+                  >
+                    <img 
+                      src={process.env.PUBLIC_URL + "/user-interface (1).png"} 
+                      alt="User" 
+                      width="24" 
+                      height="24" 
+                      className="me-2"
+                    />
+                    {currentUser.email}
+                  </button>
+                  {showDropdown && (
+                    <div className="dropdown-menu show" style={dropdownStyle}>
+                      <Link 
+                        className="dropdown-item" 
+                        to="/profile"
+                        onClick={() => setShowDropdown(false)}
+                        style={dropdownItemStyle}
+                      >
+                        User Profile
+                      </Link>
+                      <Link 
+                        className="dropdown-item" 
+                        to="/history"
+                        onClick={() => setShowDropdown(false)}
+                        style={dropdownItemStyle}
+                      >
+                        Analysis History
+                      </Link>
+                      <hr style={dropdownDividerStyle} />
+                      <button 
+                        className="dropdown-item" 
+                        onClick={handleLogout}
+                        style={logoutButtonStyle}
+                      >
+                        Logout
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Link to="/login" className="nav-link" style={linkStyle}>
                   <img 
                     src={process.env.PUBLIC_URL + "/user-interface (1).png"} 
                     alt="Login" 
                     width="24" 
                     height="24" 
                   />
-               </Link>
+                </Link>
+              )}
             </li>
           </ul>
         </div>
@@ -65,7 +145,45 @@ const linkStyle = {
   color: 'white', 
   fontWeight: '500',
   margin: '0 0.5rem',
-  textDecoration: 'none' 
+  textDecoration: 'none',
+  display: 'flex',
+  alignItems: 'center'
+};
+
+const dropdownStyle = {
+  position: 'absolute',
+  right: '0',
+  top: '100%',
+  backgroundColor: 'white',
+  borderRadius: '8px',
+  boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+  minWidth: '220px',
+  padding: '0.5rem 0',
+  border: 'none',
+  zIndex: 1000
+};
+
+const dropdownItemStyle = {
+  padding: '0.75rem 1rem',
+  color: '#333',
+  textDecoration: 'none',
+  display: 'block',
+  transition: 'background-color 0.3s ease',
+  fontSize: '0.9rem',
+  border: 'none',
+  background: 'none',
+  width: '100%',
+  textAlign: 'left'
+};
+
+const dropdownDividerStyle = {
+  margin: '0.5rem 0',
+  borderTop: '1px solid #dee2e6'
+};
+
+const logoutButtonStyle = {
+  ...dropdownItemStyle,
+  color: '#dc3545'
 };
 
 export default Navbar;

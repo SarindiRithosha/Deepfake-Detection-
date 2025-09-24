@@ -8,6 +8,7 @@ load_dotenv()
 
 class EmailService:
     def __init__(self):
+        # IMPORTANT: Ensure BREVO_API_KEY is correctly set in your .env file
         self.api_key = os.getenv("BREVO_API_KEY")
         self.base_url = "https://api.brevo.com/v3/smtp/email"
         self.headers = {
@@ -21,7 +22,16 @@ class EmailService:
         return ''.join(random.choices(string.digits, k=length))
     
     def send_verification_email(self, to_email, code):
-        """Send verification email with code"""
+        """
+        Send verification email with code.
+        NOTE: The sender email 'verityx.team@gmail.com' MUST be
+        a verified sender in your Brevo account.
+        """
+        # Check if the API key was loaded successfully
+        if not self.api_key:
+            print("Error: BREVO_API_KEY not found. Please check your .env file.")
+            return False
+
         subject = "Verify Your Verity-X Account"
         html_content = f"""
         <!DOCTYPE html>
@@ -74,13 +84,24 @@ class EmailService:
         
         try:
             response = requests.post(self.base_url, json=payload, headers=self.headers)
+            # Print response details for debugging
+            print(f"Brevo API Response Status: {response.status_code}")
+            print(f"Brevo API Response Body: {response.text}")
             return response.status_code == 201
         except Exception as e:
             print(f"Email sending error: {e}")
             return False
     
     def send_password_reset_email(self, to_email, code):
-        """Send password reset email"""
+        """
+        Send password reset email.
+        NOTE: The sender email must be a verified sender in your Brevo account.
+        """
+        # Check if the API key was loaded successfully
+        if not self.api_key:
+            print("Error: BREVO_API_KEY not found. Please check your .env file.")
+            return False
+            
         subject = "Reset Your Verity-X Password"
         html_content = f"""
         <!DOCTYPE html>
@@ -132,6 +153,9 @@ class EmailService:
         
         try:
             response = requests.post(self.base_url, json=payload, headers=self.headers)
+            # Print response details for debugging
+            print(f"Brevo API Response Status: {response.status_code}")
+            print(f"Brevo API Response Body: {response.text}")
             return response.status_code == 201
         except Exception as e:
             print(f"Password reset email error: {e}")

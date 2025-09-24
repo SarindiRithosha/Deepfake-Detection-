@@ -10,6 +10,12 @@ import {
     onAuthStateChanged
 } from 'firebase/auth';
 
+console.log('Firebase Config Check:', {
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY ? 'Loaded' : 'Missing',
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN ? 'Loaded' : 'Missing',
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID ? 'Loaded' : 'Missing'
+});
+
 const firebaseConfig = {
     apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
     authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,

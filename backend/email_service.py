@@ -123,7 +123,7 @@ class EmailService:
         payload = {
             "sender": {
                 "name": "Verity-X",
-                "email": "noreply@verity-x.com"
+                "email": "verityx.team@gmail.com"
             },
             "to": [{"email": to_email}],
             "subject": subject,

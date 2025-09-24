@@ -120,7 +120,6 @@ function Signup() {
       const data = await response.json();
 
       if (response.ok) {
-        alert('Registration successful! Please login with your credentials.');
         navigate('/login');
       } else {
         setErrors({ otp: data.detail });
@@ -145,13 +144,11 @@ function Signup() {
       const data = await response.json();
 
       if (response.ok) {
-        alert('New OTP sent to your email!');
         setErrors({});
       } else {
         alert('Failed to resend OTP. Please try again.');
       }
     } catch (error) {
-      alert('Network error. Please try again.');
     }
   };
 

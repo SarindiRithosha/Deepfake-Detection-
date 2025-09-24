@@ -36,6 +36,17 @@ function Navbar() {
     setShowDropdown(!showDropdown);
   };
 
+  const getDisplayName = () => {
+    
+        if (currentUser && currentUser.displayName) {
+            return currentUser.displayName;
+        }
+        if (currentUser && currentUser.email) {
+            return currentUser.email.split('@')[0]; 
+        }
+        return 'User';
+    };
+
   return (
     <nav className="navbar navbar-expand-lg" style={navStyle}>
       <div className="container-fluid">
@@ -87,7 +98,7 @@ function Navbar() {
                       height="24" 
                       className="me-2"
                     />
-                    {currentUser.email}
+                    {getDisplayName()}
                   </button>
                   {showDropdown && (
                     <div className="dropdown-menu show" style={dropdownStyle}>

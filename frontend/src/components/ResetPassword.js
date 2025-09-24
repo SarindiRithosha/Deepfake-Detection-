@@ -83,7 +83,6 @@ function ResetPassword() {
       const data = await response.json();
 
       if (response.ok) {
-        alert('Password reset successfully! Please login with your new password.');
         navigate('/login');
       } else {
         setErrors({ submit: data.detail });

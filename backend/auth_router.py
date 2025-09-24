@@ -13,7 +13,6 @@ load_dotenv()
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
-# In-memory storage for OTP codes (expires in 2 minutes)
 otp_storage: Dict[str, dict] = {}
 
 @router.post("/signup", response_model=dict)
@@ -111,7 +110,8 @@ async def verify_signup_otp(verification_data: VerificationRequest):
         return {
             "message": "Email verified successfully. You can now login.",
             "verified": True,
-            "email": otp_entry["email"]
+            "email": otp_entry["email"],
+            "name": otp_entry["name"]
         }
         
     except FirebaseError as e:

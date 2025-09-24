@@ -136,7 +136,7 @@ function Detection() {
                 onClick={() => navigate('/login')}
                 style={loginPromptStyle}
               >
-                Login for unlimited uploads
+                Login to Analyze More Files
               </button>
             </small>
           </div>

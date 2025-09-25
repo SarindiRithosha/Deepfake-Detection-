@@ -12,6 +12,7 @@ import ForgotPassword from './components/ForgotPassword';
 import VerifyReset from './components/VerifyReset';
 import ResetPassword from './components/ResetPassword';
 import UserProfile from './components/UserProfile';  
+import AnalysisHistory from './components/AnalysisHistory'; 
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './index.css';
 
@@ -34,7 +35,8 @@ function AppContent() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/verify-reset" element={<VerifyReset />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/profile" element={<UserProfile />} />  
+          <Route path="/profile" element={<UserProfile />} /> 
+          <Route path="/history" element={<AnalysisHistory />} /> 
         </Routes>
       </main>
       {!isAuthRoute && <Footer />}

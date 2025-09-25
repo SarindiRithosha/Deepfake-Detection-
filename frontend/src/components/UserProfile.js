@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { FaUser, FaEnvelope, FaSignOutAlt, FaUpload, FaTrash, FaEdit, FaBold, FaItalic, FaUnderline } from 'react-icons/fa';
+import { FaUser, FaEnvelope, FaSignOutAlt, FaUpload, FaTrash, FaEdit, FaBold, FaItalic, FaUnderline, FaCheckCircle } from 'react-icons/fa';
 
 function UserProfile() {
     const { currentUser, userProfile, logout } = useAuth();
@@ -21,6 +21,8 @@ function UserProfile() {
     });
     const [showNameConfirm, setShowNameConfirm] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+
 
     // Redirect if not logged in
     useEffect(() => {
@@ -99,14 +101,14 @@ function UserProfile() {
             });
 
             if (response.ok) {
-                alert('Message sent successfully!');
+                setShowSuccessPopup(true);
                 setContactForm({ subject: '', message: '' });
             } else {
-                alert('Failed to send message. Please try again.');
+               // alert('Failed to send message. Please try again.');
             }
         } catch (error) {
             console.error('Error sending message:', error);
-            alert('Error sending message. Please try again.');
+           // alert('Error sending message. Please try again.');
         }
     };
 
@@ -168,6 +170,22 @@ function UserProfile() {
 
     return (
         <div style={pageStyle}>
+             {showSuccessPopup && (
+                <div style={modalOverlayStyle}>
+                    <div style={successPopupStyle}>
+                        <FaCheckCircle style={successIconStyle} />
+                        <h3 style={successTitleStyle}>Message Sent Successfully</h3>
+                        <p style={successMessageStyle}>Thank you for contacting us. We'll get back to you soon!</p>
+                        <button 
+                            onClick={() => setShowSuccessPopup(false)}
+                            style={successButtonStyle}
+                        >
+                            OK
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Confirmation Modals */}
             {showNameConfirm && (
                 <div style={modalOverlayStyle}>
@@ -395,7 +413,48 @@ function UserProfile() {
     );
 }
 
-// Styles
+const successPopupStyle = {
+    backgroundColor: 'white',
+    padding: '3rem 2rem',
+    borderRadius: '15px',
+    maxWidth: '400px',
+    width: '90%',
+    textAlign: 'center',
+    boxShadow: '0 10px 30px rgba(0,0,0,0.2)'
+};
+
+const successIconStyle = {
+    color: '#28a745',
+    fontSize: '4rem',
+    marginBottom: '1.5rem'
+};
+
+const successTitleStyle = {
+    color: '#28a745',
+    fontSize: '1.5rem',
+    fontWeight: 'bold',
+    marginBottom: '1rem'
+};
+
+const successMessageStyle = {
+    color: '#666',
+    fontSize: '1rem',
+    marginBottom: '2rem',
+    lineHeight: '1.5'
+};
+
+const successButtonStyle = {
+    backgroundColor: '#28a745',
+    color: 'white',
+    border: 'none',
+    padding: '0.75rem 2rem',
+    borderRadius: '8px',
+    fontSize: '1rem',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'background-color 0.3s ease'
+};
+
 const pageStyle = {
     backgroundColor: '#E5E3E3',
     minHeight: '100vh',

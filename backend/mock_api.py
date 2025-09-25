@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse, FileResponse
 from PIL import Image, ImageDraw, ImageFilter
 from auth_router import router as auth_router
 from upload_router import router as upload_router
+from contact_router import router as contact_router
 from firebase_config import initialize_firebase
 import numpy as np
 import cv2
@@ -33,6 +34,7 @@ initialize_firebase()
 # Include routers
 app.include_router(auth_router)
 app.include_router(upload_router)
+app.include_router(contact_router) 
 
 def generate_realistic_frame(width: int, height: int, is_fake: bool = True) -> Image.Image:
     """Generate a realistic-looking video frame using OpenCV and PIL"""

@@ -125,7 +125,6 @@ function UserProfile() {
             if (response.ok) {
                 await logout();
                 navigate('/');
-                alert('Account deleted successfully.');
             }
         } catch (error) {
             console.error('Error deleting account:', error);

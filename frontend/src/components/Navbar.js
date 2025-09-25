@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 function Navbar() {
-  const { currentUser, logout } = useAuth();
+  const { currentUser, userProfile, logout } = useAuth();
   const navigate = useNavigate();
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
@@ -37,6 +37,9 @@ function Navbar() {
   };
 
   const getDisplayName = () => {
+        if (userProfile && userProfile.name) {
+          return userProfile.name;
+        }
     
         if (currentUser && currentUser.displayName) {
             return currentUser.displayName;

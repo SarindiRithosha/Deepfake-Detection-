@@ -42,6 +42,12 @@ export const AuthProvider = ({ children }) => {
         return null;
     };
 
+    const updateProfile = async () => {
+        if (currentUser) {
+            await fetchUserProfile(currentUser);
+        }
+    };
+
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged(async (user) => {
             setCurrentUser(user);
@@ -130,7 +136,8 @@ export const AuthProvider = ({ children }) => {
         incrementUploadCount,
         canUpload,
         getUploadLimit,
-        logout
+        logout,
+        updateProfile 
     };
 
     return (

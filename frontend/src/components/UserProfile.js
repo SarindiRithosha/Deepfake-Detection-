@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { FaUser, FaEnvelope, FaSignOutAlt, FaUpload, FaTrash, FaEdit, FaBold, FaItalic, FaUnderline, FaCheckCircle } from 'react-icons/fa';
 
 function UserProfile() {
-    const { currentUser, userProfile, logout } = useAuth();
+    const { currentUser, userProfile, logout, updateProfile } = useAuth();
     const navigate = useNavigate();
     const [activeSection, setActiveSection] = useState('profile');
     const [userData, setUserData] = useState({
@@ -67,7 +67,7 @@ function UserProfile() {
             });
 
             if (response.ok) {
-                setUserData(prev => ({ ...prev, name: tempName }));
+                await updateProfile(); 
                 setIsEditingName(false);
             }
         } catch (error) {

@@ -303,4 +303,48 @@ async def get_user_profile(uid: str):
             raise HTTPException(status_code=404, detail="User profile not found")
     except FirebaseError as e:
         raise HTTPException(status_code=404, detail="User not found")
+    
+@router.put("/user/{uid}")
+async def update_user_profile(uid: str, user_update: dict):
+    """Update user profile information"""
+    try:
+        # Verify the user is updating their own profile
+        # (You might want to add proper authentication here)
+        
+        user_ref = firestore.client().collection("users").document(uid)
+        
+        update_data = {}
+        if 'name' in user_update:
+            update_data['name'] = user_update['name']
+            # Also update display name in Firebase Auth
+            try:
+                auth.update_user(uid, display_name=user_update['name'])
+            except Exception as e:
+                print(f"Error updating auth display name: {e}")
+        
+        if update_data:
+            user_ref.update(update_data)
+        
+        return {"message": "Profile updated successfully", "updated_fields": list(update_data.keys())}
+        
+    except Exception as e:
+        print(f"Error updating user profile: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update profile")
+
+@router.delete("/user/{uid}")
+async def delete_user_account(uid: str):
+    """Delete user account permanently"""
+    try:
+        # Delete from Firebase Auth
+        auth.delete_user(uid)
+        
+        # Delete from Firestore
+        user_ref = firestore.client().collection("users").document(uid)
+        user_ref.delete()
+        
+        return {"message": "Account deleted successfully"}
+        
+    except Exception as e:
+        print(f"Error deleting user account: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete account")
 

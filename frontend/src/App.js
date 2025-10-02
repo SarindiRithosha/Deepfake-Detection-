@@ -13,12 +13,13 @@ import VerifyReset from './components/VerifyReset';
 import ResetPassword from './components/ResetPassword';
 import UserProfile from './components/UserProfile';  
 import AnalysisHistory from './components/AnalysisHistory'; 
+import AdminDashboard from './components/admin/AdminDashboard';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './index.css';
 
 function AppContent() {
   const location = useLocation();
-  const authRoutes = ['/login', '/signup', '/forgot-password', '/verify-reset', '/reset-password'];
+  const authRoutes = ['/login', '/signup', '/forgot-password', '/verify-reset', '/reset-password', '/admin'];
   const isAuthRoute = authRoutes.includes(location.pathname);
 
   return (
@@ -37,6 +38,7 @@ function AppContent() {
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/profile" element={<UserProfile />} /> 
           <Route path="/history" element={<AnalysisHistory />} /> 
+          <Route path="/admin" element={<AdminDashboard />} />
         </Routes>
       </main>
       {!isAuthRoute && <Footer />}

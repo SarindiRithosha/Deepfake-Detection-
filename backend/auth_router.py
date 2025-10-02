@@ -92,10 +92,13 @@ async def verify_signup_otp(verification_data: VerificationRequest):
             display_name=otp_entry["name"],
             email_verified=True
         )
+
+        user_id = user.uid 
         
         # Create user document in Firestore
         user_ref = firestore.client().collection("users").document(user.uid)
         user_ref.set({
+            "user_id": user_id,
             "name": otp_entry["name"],
             "email": otp_entry["email"],
             "email_verified": True,
@@ -111,7 +114,9 @@ async def verify_signup_otp(verification_data: VerificationRequest):
             "message": "Email verified successfully. You can now login.",
             "verified": True,
             "email": otp_entry["email"],
-            "name": otp_entry["name"]
+            "name": otp_entry["name"],
+            "user_id": user_id
+
         }
         
     except FirebaseError as e:

@@ -8,13 +8,43 @@ function AdminDashboard() {
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [adminUser, setAdminUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState(null);
 
-    // Mock data for KPIs
-    const kpiData = {
-        totalAnalysis: { value: 245, trend: '+12%', trendType: 'up' },
-        activeUsers: { value: 12, trend: '-2%', trendType: 'down' },
-        modelAccuracy: { value: '90%', trend: '+3%', trendType: 'up' }
-    };
+  const [kpiData, setKpiData] = useState({
+    totalAnalysis: { value: 0, trend: '+0%', trendType: 'up' },
+    activeUsers: { value: 0 },
+    modelAccuracy: { value: '90%', trend: '+3%', trendType: 'up' }
+  });
+
+    const fetchDashboardData = async () => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch('http://localhost:8000/admin/dashboard-stats', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setDashboardData(data);
+        
+        // Update KPI data with real values
+        setKpiData({
+          totalAnalysis: { 
+            value: data.total_analyses, 
+            trend: data.analysis_trend.trend_display, 
+            trendType: data.analysis_trend.trend_type 
+          },
+          activeUsers: { value: data.active_users },
+          modelAccuracy: { value: '90%', trend: '+3%', trendType: 'up' }
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch dashboard data:', error);
+    }
+  };
+
 
     useEffect(() => {
         const checkAdminAuth = async () => {
@@ -118,7 +148,6 @@ function AdminDashboard() {
 
     return (
         <div style={adminLayoutStyle}>
-            {/* Fixed Header */}
             <header style={headerWrapperStyle}>
                 {/* Left (Logo) Section */}
                 <div style={headerLeftStyle}>
@@ -210,10 +239,6 @@ function AdminDashboard() {
                                         <div>
                                             <p style={kpiLabelStyle}>Active Users</p>
                                             <h2 style={kpiValueStyle}>{kpiData.activeUsers.value}</h2>
-                                            <div style={{...trendStyle, color: getTrendColor(kpiData.activeUsers.trendType)}}>
-                                                {getTrendIcon(kpiData.activeUsers.trendType)}
-                                                <span style={trendTextStyle}>{kpiData.activeUsers.trend}</span>
-                                            </div>
                                         </div>
                                         <FaUserFriends style={kpiIconStyle} />
                                     </div>
@@ -307,27 +332,54 @@ function AdminDashboard() {
 
 // User Management Component
 function UserManagement() {
-    const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [usersData, setUsersData] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-    // Mock user data
-    const usersData = [
-        { id: 1, name: 'John Smith', email: 'john.smith@email.com', analyses: 45, status: 'Active' },
-        { id: 2, name: 'Sarah Johnson', email: 'sarah.j@email.com', analyses: 23, status: 'Active' },
-        { id: 3, name: 'Mike Chen', email: 'mike.chen@email.com', analyses: 67, status: 'Active' },
-        { id: 4, name: 'Emily Davis', email: 'emily.davis@email.com', analyses: 12, status: 'Inactive' },
-        { id: 5, name: 'Alex Brown', email: 'alex.brown@email.com', analyses: 89, status: 'Active' },
-        { id: 6, name: 'Maria Garcia', email: 'maria.g@email.com', analyses: 34, status: 'Active' },
-        { id: 7, name: 'David Wilson', email: 'david.w@email.com', analyses: 56, status: 'Inactive' },
-        { id: 8, name: 'Lisa Anderson', email: 'lisa.a@email.com', analyses: 78, status: 'Active' },
-        { id: 9, name: 'James Miller', email: 'james.m@email.com', analyses: 21, status: 'Active' },
-        { id: 10, name: 'Karen Taylor', email: 'karen.t@email.com', analyses: 43, status: 'Active' },
-        { id: 11, name: 'Robert Lee', email: 'robert.lee@email.com', analyses: 65, status: 'Inactive' },
-        { id: 12, name: 'Jennifer White', email: 'jennifer.w@email.com', analyses: 32, status: 'Active' }
-    ];
+  const fetchUsers = async (search = '') => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const url = search 
+        ? `http://localhost:8000/admin/users?search=${encodeURIComponent(search)}`
+        : 'http://localhost:8000/admin/users';
+      
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUsersData(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+    useEffect(() => {
+        fetchUsers();
+    }, []);
+
+    const handleSearch = (e) => {
+        e.preventDefault();
+        fetchUsers(searchQuery);
+    };
 
     const getStatusStyle = (status) => {
         return status === 'Active' ? activeStatusStyle : inactiveStatusStyle;
     };
+
+    if (loading) {
+        return (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}>
+            <p>Loading users...</p>
+        </div>
+        );
+    }
 
     return (
         <div>
@@ -367,8 +419,8 @@ function UserManagement() {
                         </thead>
                         <tbody>
                             {usersData.map((user, index) => (
-                                <tr key={user.id} style={index % 2 === 0 ? evenRowStyle : oddRowStyle}>
-                                    <td style={tdStyle}>{user.id}</td>
+                                <tr key={user.uid} style={index % 2 === 0 ? evenRowStyle : oddRowStyle}>
+                                    <td style={tdStyle}>{user.id.toString().padStart(3, '0')}</td>
                                     <td style={{...tdStyle, ...nameCellStyle}}>{user.name}</td>
                                     <td style={{...tdStyle, ...emailCellStyle}}>{user.email}</td>
                                     <td style={{...tdStyle, ...analysesCellStyle}}>{user.analyses}</td>

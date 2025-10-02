@@ -1,3 +1,4 @@
+// AuthContext.js - Update to track user online status
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { auth, getCurrentUser, logoutUser } from '../firebase';
 
@@ -21,6 +22,26 @@ export const AuthProvider = ({ children }) => {
         }
     }, [currentUser]);
 
+    const updateUserOnlineStatus = async (userId, isOnline) => {
+        try {
+            const token = await auth.currentUser.getIdToken();
+            const response = await fetch(`http://localhost:8000/admin/user/${userId}/update-online-status`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ is_online: isOnline })
+            });
+            
+            if (!response.ok) {
+                console.error('Failed to update online status:', response.status);
+            }
+        } catch (error) {
+            console.error('Failed to update online status:', error);
+        }
+    };
+
     const fetchUserProfile = async (user) => {
         try {
             const token = await user.getIdToken();
@@ -34,6 +55,12 @@ export const AuthProvider = ({ children }) => {
             if (response.ok) {
                 const profileData = await response.json();
                 setUserProfile(profileData);
+                
+                // Update user as online
+                if (user.uid) {
+                    await updateUserOnlineStatus(user.uid, true);
+                }
+                
                 return profileData;
             }
         } catch (error) {
@@ -86,7 +113,6 @@ export const AuthProvider = ({ children }) => {
                 // Unregistered user - get from local storage
                 const storedCount = localStorage.getItem('unregisteredUploadCount');
                 setUploadCount(storedCount ? parseInt(storedCount) : 0);
-            
             }
             
             setLoading(false);
@@ -95,19 +121,38 @@ export const AuthProvider = ({ children }) => {
         return unsubscribe;
     }, []);
 
+    // Update online status when user leaves the app
+    useEffect(() => {
+        const handleBeforeUnload = async () => {
+            if (currentUser && currentUser.uid) {
+                await updateUserOnlineStatus(currentUser.uid, false);
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, [currentUser]);
+
     const incrementUploadCount = async () => {
         if (currentUser) {
             // Registered user - update in backend
             try {
                 const token = await currentUser.getIdToken();
-                await fetch('http://localhost:8000/uploads/increment', {
+                const response = await fetch('http://localhost:8000/uploads/increment', {
                     method: 'POST',
                     headers: { 
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     }
                 });
-                setUploadCount(prev => prev + 1);
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    setUploadCount(result.current_count || uploadCount + 1);
+                }
             } catch (error) {
                 console.error('Error incrementing upload count:', error);
             }
@@ -130,6 +175,11 @@ export const AuthProvider = ({ children }) => {
 
     const logout = async () => {
         try {
+            // Update user as offline before logout
+            if (currentUser && currentUser.uid) {
+                await updateUserOnlineStatus(currentUser.uid, false);
+            }
+            
             await logoutUser();
             setCurrentUser(null);
             setUploadCount(0);

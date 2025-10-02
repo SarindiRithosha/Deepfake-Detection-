@@ -299,6 +299,12 @@ async def get_user_profile(uid: str):
         
         if user_data.exists:
             profile_data = user_data.to_dict()
+            
+            user_ref.update({
+                'last_login': firestore.SERVER_TIMESTAMP,
+                'is_online': True
+            })
+            
             return {
                 "uid": uid,
                 "name": user.display_name,
@@ -306,7 +312,9 @@ async def get_user_profile(uid: str):
                 "email_verified": user.email_verified,
                 "analysis_count": profile_data.get("analysis_count", 0),
                 "max_uploads": profile_data.get("max_uploads", 50),
-                "created_at": profile_data.get("created_at")
+                "created_at": profile_data.get("created_at"),
+                "last_login": firestore.SERVER_TIMESTAMP,  
+                "is_online": True
             }
         else:
             raise HTTPException(status_code=404, detail="User profile not found")

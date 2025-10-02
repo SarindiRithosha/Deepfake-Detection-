@@ -16,6 +16,9 @@ from datetime import datetime
 import json
 from typing import List
 import tempfile
+from admin_router import router as admin_router
+
+
 
 app = FastAPI(title="Verity-X API", version="1.0.0")
 
@@ -35,6 +38,7 @@ initialize_firebase()
 app.include_router(auth_router)
 app.include_router(upload_router)
 app.include_router(contact_router) 
+app.include_router(admin_router)
 
 def generate_realistic_frame(width: int, height: int, is_fake: bool = True) -> Image.Image:
     """Generate a realistic-looking video frame using OpenCV and PIL"""

@@ -62,6 +62,7 @@ function AdminDashboard() {
 
             if (response.ok) {
             setAdminUser(JSON.parse(storedAdmin));
+            await fetchDashboardData();
             } else {
             // Invalid token, redirect to login
             localStorage.removeItem('adminToken');

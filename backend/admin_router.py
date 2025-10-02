@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
+# admin_router.py - Update the get_dashboard_stats function
 @router.get("/dashboard-stats")
 async def get_dashboard_stats():
     """Get dashboard statistics for admin panel"""
@@ -21,6 +22,8 @@ async def get_dashboard_stats():
         total_analyses = 0
         active_users = 0
         all_users_data = []
+        
+        print("=== DEBUG: Calculating dashboard stats ===")
         
         # Calculate sequential IDs and process user data
         user_list = list(users)
@@ -40,16 +43,29 @@ async def get_dashboard_stats():
             last_login = user_data.get('last_login')
             is_online = user_data.get('is_online', False)
             
-            if last_login:
-                last_login_time = last_login.replace(tzinfo=None) if hasattr(last_login, 'replace') else last_login
-                time_diff = datetime.now() - last_login_time
-                if is_online and time_diff.total_seconds() < 900:  # 15 minutes
-                    active_users += 1
-                    user_status = "Active"
-                else:
-                    user_status = "Inactive"
-            else:
-                user_status = "Inactive"
+            user_active = False
+            if is_online:
+                user_active = True
+                print(f"User {user_data.get('name')} is active (is_online=True)")
+            elif last_login:
+                try:
+                    # Handle Firestore timestamp
+                    if hasattr(last_login, 'timestamp'):
+                        last_login_time = last_login.timestamp()
+                        current_time = datetime.now().timestamp()
+                        time_diff = current_time - last_login_time
+                    else:
+                        last_login_time = last_login.replace(tzinfo=None) if hasattr(last_login, 'replace') else last_login
+                        time_diff = (datetime.now() - last_login_time).total_seconds()
+                    
+                    if time_diff < 900:  # 15 minutes
+                        user_active = True
+                        print(f"User {user_data.get('name')} is active (recent login: {time_diff:.0f}s ago)")
+                except Exception as e:
+                    print(f"Error checking activity for user {user_data.get('name')}: {e}")
+            
+            if user_active:
+                active_users += 1
             
             # Store user data for user management
             all_users_data.append({
@@ -58,13 +74,18 @@ async def get_dashboard_stats():
                 'name': user_data.get('name', 'Unknown'),
                 'email': user_data.get('email', ''),
                 'analyses': user_analyses,
-                'status': user_status,
+                'status': "Active" if user_active else "Inactive",
                 'last_login': user_data.get('last_login'),
                 'is_online': is_online
             })
         
-        # Calculate trend for total analyses (this week vs last week)
+        # Calculate trend for total analyses
         trend_data = await get_analysis_trend()
+        
+        print(f"=== DEBUG: Dashboard Stats Summary ===")
+        print(f"Total analyses: {total_analyses}")
+        print(f"Active users: {active_users}")
+        print(f"Analysis trend: {trend_data}")
         
         return {
             'total_analyses': total_analyses,
@@ -74,6 +95,7 @@ async def get_dashboard_stats():
         }
         
     except Exception as e:
+        print(f"Error in get_dashboard_stats: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch dashboard stats: {str(e)}")
 
 @router.get("/analysis-trend")

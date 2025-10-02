@@ -82,6 +82,18 @@ function AdminDashboard() {
         checkAdminAuth();
     }, [navigate]);
 
+     useEffect(() => {
+    if (activeNav === 'dashboard' && adminUser) {
+      const interval = setInterval(() => {
+        fetchDashboardData();
+      }, 30000); 
+
+      return () => {
+        clearInterval(interval);
+      };
+    }
+  }, [activeNav, adminUser]);
+
     const handleLogout = async () => {
         const token = localStorage.getItem('adminToken');
         
@@ -214,7 +226,25 @@ function AdminDashboard() {
                             {/* Page Header */}
                             <div style={pageHeaderStyle}>
                                 <h1 style={pageTitleStyle}>Admin Dashboard</h1>
-                                <p style={pageSubtitleStyle}>Overview of system performance and analytics</p>
+                                <p style={pageSubtitleStyle}>Overview of system performance and analytics
+                                     <span style={{ 
+                                        fontSize: '0.9rem', 
+                                        color: '#28a745', 
+                                        marginLeft: '1rem',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem'
+                                    }}>
+                                        <div style={{
+                                        width: '8px',
+                                        height: '8px',
+                                        borderRadius: '50%',
+                                        backgroundColor: '#28a745',
+                                        animation: 'pulse 2s infinite'
+                                        }}></div>
+                                        Auto-updating every 30 seconds
+                                    </span>
+                                </p>
                             </div>
 
                             {/* KPI Cards */}

@@ -57,22 +57,45 @@ function Login() {
     }
 
     try {
-      await loginUser(formData.email, formData.password);
-        if (formData.email === 'verityx.team@gmail.com') {
-        navigate('/admin');
+      // Check if it's admin login BEFORE attempting Firebase auth
+      if (formData.email === 'verityx.team@gmail.com') {
+        // For admin, we'll use a different approach
+        const response = await fetch('http://localhost:8000/auth/admin-login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password
+          })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          // Store admin session
+          localStorage.setItem('adminToken', result.token);
+          localStorage.setItem('adminUser', JSON.stringify(result.admin));
+          navigate('/admin');
+        } else {
+          throw new Error(result.detail || 'Admin login failed');
+        }
       } else {
+        // Regular user login with Firebase
+        await loginUser(formData.email, formData.password);
         navigate('/');
       }
     } catch (error) {
       console.error('Login error:', error);
-      if (error.code === 'auth/invalid-credential') {
+      if (error.code === 'auth/invalid-credential' || error.message.includes('Invalid credentials')) {
         setErrors({ submit: 'Invalid email or password' });
       } else if (error.code === 'auth/user-not-found') {
         setErrors({ submit: 'No account found with this email' });
       } else if (error.code === 'auth/wrong-password') {
         setErrors({ submit: 'Incorrect password' });
       } else {
-        setErrors({ submit: 'Login failed. Please try again.' });
+        setErrors({ submit: error.message || 'Login failed. Please try again.' });
       }
     } finally {
       setLoading(false);

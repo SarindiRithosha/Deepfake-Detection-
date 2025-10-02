@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; 
 import { FaBell, FaChartLine, FaUsers, FaChartBar, FaUserFriends, FaBullseye, FaArrowUp, FaArrowDown, FaMinus, FaUserCircle } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
 
 function AdminDashboard() {
-    const navigate = useNavigate();
-    const { logout } = useAuth();
-    const [activeNav, setActiveNav] = useState('dashboard');
-    const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const navigate = useNavigate();
+  const [activeNav, setActiveNav] = useState('dashboard');
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [adminUser, setAdminUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
     // Mock data for KPIs
     const kpiData = {
@@ -16,14 +16,77 @@ function AdminDashboard() {
         modelAccuracy: { value: '90%', trend: '+3%', trendType: 'up' }
     };
 
-    const handleLogout = async () => {
-        try {
-        await logout();
-        navigate('/login');
-        } catch (error) {
-        console.error('Logout error:', error);
+    useEffect(() => {
+        const checkAdminAuth = async () => {
+        const token = localStorage.getItem('adminToken');
+        const storedAdmin = localStorage.getItem('adminUser');
+
+        if (!token || !storedAdmin) {
+            navigate('/login');
+            return;
         }
+
+        try {
+            const response = await fetch(`http://localhost:8000/auth/admin/verify?token=${token}`); 
+
+
+            if (response.ok) {
+            setAdminUser(JSON.parse(storedAdmin));
+            } else {
+            // Invalid token, redirect to login
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('adminUser');
+            navigate('/login');
+            }
+        } catch (error) {
+            console.error('Admin verification failed:', error);
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('adminUser');
+            navigate('/login');
+        } finally {
+            setIsLoading(false);
+        }
+        };
+
+        checkAdminAuth();
+    }, [navigate]);
+
+    const handleLogout = async () => {
+        const token = localStorage.getItem('adminToken');
+        
+        if (token) {
+        try {
+            await fetch('http://localhost:8000/auth/admin-logout', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ token })
+            });
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
+        }
+
+        // Clear admin session
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUser');
+        navigate('/login');
     };
+
+    if (isLoading) {
+        return (
+        <div style={adminLayoutStyle}>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+            <p>Loading Admin Dashboard...</p>
+            </div>
+        </div>
+        );
+    }
+
+    if (!adminUser) {
+        return null;
+    }
 
     // Mock data for charts
     const accuracyData = [

@@ -8,6 +8,10 @@ from email_service import email_service
 import time
 from typing import Dict
 import uuid
+import hashlib
+import secrets
+from datetime import datetime, timedelta
+from fastapi import Query
 
 load_dotenv()
 
@@ -352,4 +356,81 @@ async def delete_user_account(uid: str):
     except Exception as e:
         print(f"Error deleting user account: {e}")
         raise HTTPException(status_code=500, detail="Failed to delete account")
+    
+ADMIN_CREDENTIALS = {
+    os.getenv("ADMIN_EMAIL"): {
+        "password_hash": hashlib.sha256(os.getenv("ADMIN_PASSWORD").encode()).hexdigest(),
+        "name": os.getenv("ADMIN_NAME"),
+        "role": "super_admin"
+    }
+}
+
+admin_sessions = {}
+
+@router.post("/admin-login", response_model=dict)
+async def admin_login(login_data: UserLogin):
+    """Admin login with separate authentication"""
+    try:
+        # Check if email exists in admin credentials
+        if login_data.email not in ADMIN_CREDENTIALS:
+            raise HTTPException(status_code=401, detail="Invalid admin credentials")
+        
+        admin_info = ADMIN_CREDENTIALS[login_data.email]
+        
+        # Verify password
+        password_hash = hashlib.sha256(login_data.password.encode()).hexdigest()
+        if password_hash != admin_info["password_hash"]:
+            raise HTTPException(status_code=401, detail="Invalid admin credentials")
+        
+        # Create admin session token
+        session_token = secrets.token_hex(32)
+        admin_sessions[session_token] = {
+            "email": login_data.email,
+            "name": admin_info["name"],
+            "role": admin_info["role"],
+            "login_time": datetime.now(),
+            "expires_at": datetime.now() + timedelta(hours=24)
+        }
+        
+        return {
+            "message": "Admin login successful",
+            "token": session_token,
+            "admin": {
+                "email": login_data.email,
+                "name": admin_info["name"],
+                "role": admin_info["role"]
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Admin login failed")
+
+@router.post("/admin-logout", response_model=dict)
+async def admin_logout(token: str):
+    """Admin logout"""
+    if token in admin_sessions:
+        del admin_sessions[token]
+    return {"message": "Admin logged out successfully"}
+
+@router.get("/admin/verify")
+async def verify_admin_token(token: str = Query(...)):  
+    """Verify admin token"""
+    if token not in admin_sessions:
+        raise HTTPException(status_code=401, detail="Invalid or expired admin token")
+    
+    session_data = admin_sessions[token]
+    if datetime.now() > session_data["expires_at"]:
+        del admin_sessions[token]
+        raise HTTPException(status_code=401, detail="Admin session expired")
+    
+    return {
+        "valid": True,
+        "admin": {
+            "email": session_data["email"],
+            "name": session_data["name"],
+            "role": session_data["role"]
+        }
+    }
 

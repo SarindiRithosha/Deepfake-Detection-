@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -16,22 +16,56 @@ import AnalysisHistory from './components/AnalysisHistory';
 import AdminDashboard from './components/admin/AdminDashboard';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './index.css';
-import { useAuth } from './contexts/AuthContext';
-import { Navigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 
-function ProtectedAdminRoute({ children }) {
-  const { currentUser, userProfile } = useAuth();
-  
-  if (!currentUser) {
-    return <Navigate to="/login" />;
+
+function AdminRoute({ children }) {
+  const [isAuthenticated, setIsAuthenticated] = useState(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const checkAdminAuth = async () => {
+      const token = localStorage.getItem('adminToken');
+      const storedAdmin = localStorage.getItem('adminUser');
+
+      if (!token || !storedAdmin) {
+        navigate('/login');
+        return;
+      }
+
+      try {
+        const response = await fetch(`http://localhost:8000/auth/admin/verify?token=${token}`); 
+
+
+        if (response.ok) {
+          setIsAuthenticated(true);
+        } else {
+          localStorage.removeItem('adminToken');
+          localStorage.removeItem('adminUser');
+          navigate('/login');
+        }
+      } catch (error) {
+        console.error('Admin verification failed:', error);
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUser');
+        navigate('/login');
+      }
+    };
+
+    checkAdminAuth();
+  }, [navigate]);
+
+  if (isAuthenticated === null) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <p>Loading...</p>
+      </div>
+    );
   }
-  
-  if (currentUser.email !== 'verityx.team@gmail.com') {
-    return <Navigate to="/" />;
-  }
-  
-  return children;
+
+  return isAuthenticated ? children : null;
 }
+
 
 function AppContent() {
   const location = useLocation();
@@ -54,8 +88,7 @@ function AppContent() {
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/profile" element={<UserProfile />} /> 
           <Route path="/history" element={<AnalysisHistory />} /> 
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/admin" element={<ProtectedAdminRoute> <AdminDashboard /> </ProtectedAdminRoute> } />
+          <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />        
         </Routes>
       </main>
       {!isAuthRoute && <Footer />}

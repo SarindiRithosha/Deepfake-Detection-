@@ -16,6 +16,22 @@ import AnalysisHistory from './components/AnalysisHistory';
 import AdminDashboard from './components/admin/AdminDashboard';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './index.css';
+import { useAuth } from './contexts/AuthContext';
+import { Navigate } from 'react-router-dom';
+
+function ProtectedAdminRoute({ children }) {
+  const { currentUser, userProfile } = useAuth();
+  
+  if (!currentUser) {
+    return <Navigate to="/login" />;
+  }
+  
+  if (currentUser.email !== 'verityx.team@gmail.com') {
+    return <Navigate to="/" />;
+  }
+  
+  return children;
+}
 
 function AppContent() {
   const location = useLocation();
@@ -39,6 +55,7 @@ function AppContent() {
           <Route path="/profile" element={<UserProfile />} /> 
           <Route path="/history" element={<AnalysisHistory />} /> 
           <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin" element={<ProtectedAdminRoute> <AdminDashboard /> </ProtectedAdminRoute> } />
         </Routes>
       </main>
       {!isAuthRoute && <Footer />}

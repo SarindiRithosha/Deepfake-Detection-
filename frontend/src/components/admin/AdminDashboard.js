@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import { FaBell, FaChartLine, FaUsers, FaChartBar, FaUserFriends, FaBullseye, FaArrowUp, FaArrowDown, FaMinus, FaUserCircle } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 
 function AdminDashboard() {
+    const navigate = useNavigate();
+    const { logout } = useAuth();
     const [activeNav, setActiveNav] = useState('dashboard');
     const [showUserDropdown, setShowUserDropdown] = useState(false);
 
@@ -10,6 +14,15 @@ function AdminDashboard() {
         totalAnalysis: { value: 245, trend: '+12%', trendType: 'up' },
         activeUsers: { value: 12, trend: '-2%', trendType: 'down' },
         modelAccuracy: { value: '90%', trend: '+3%', trendType: 'up' }
+    };
+
+    const handleLogout = async () => {
+        try {
+        await logout();
+        navigate('/login');
+        } catch (error) {
+        console.error('Logout error:', error);
+        }
     };
 
     // Mock data for charts
@@ -71,7 +84,9 @@ function AdminDashboard() {
                     </button>
                     {showUserDropdown && (
                         <div style={dropdownMenuStyle}>
-                        <button style={dropdownItemStyle}>Logout</button>
+                        <button style={dropdownItemStyle} onClick={handleLogout} >
+                            Logout
+                        </button>
                         </div>
                     )}
                     </div>

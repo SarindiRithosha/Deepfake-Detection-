@@ -58,7 +58,11 @@ function Login() {
 
     try {
       await loginUser(formData.email, formData.password);
-      navigate('/');
+        if (formData.email === 'verityx.team@gmail.com') {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
     } catch (error) {
       console.error('Login error:', error);
       if (error.code === 'auth/invalid-credential') {

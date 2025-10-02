@@ -55,6 +55,15 @@ export const AuthProvider = ({ children }) => {
             if (user) {
                const profile = await fetchUserProfile(user);
 
+                if (user.email === 'verityx.team@gmail.com') {
+                    setUserProfile({
+                    ...profile,
+                    isAdmin: true
+                    });
+                } else {
+                    setUserProfile(profile);
+                }
+
                 try {
                     // Get user's upload count from backend
                     const token = await user.getIdToken();

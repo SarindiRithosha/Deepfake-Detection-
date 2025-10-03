@@ -25,6 +25,7 @@ import yt_dlp
 import subprocess
 import shutil
 from email_service import email_service, FeedbackRequest
+from email_service import notification_service
 
 
 app = FastAPI(title="Verity-X API", version="1.0.0")
@@ -686,6 +687,7 @@ async def cleanup_video_file(analysis_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Cleanup failed: {str(e)}")
     
+
 @app.post("/submit-feedback")
 async def submit_feedback(feedback_request: FeedbackRequest):
     """Endpoint to receive user feedback"""
@@ -710,6 +712,15 @@ async def submit_feedback(feedback_request: FeedbackRequest):
         except Exception as e:
             print(f"Error logging feedback: {e}")
         
+        # Add notification for admin
+        notification_data = {
+            "type": "feedback",
+            "user_name": "Anonymous User",  
+            "source": "Feedback Form",
+            "user_email": ""  
+        }
+        notification_service.add_notification(notification_data)
+        
         # Send email notification
         email_sent = email_service.send_feedback_email(feedback_request)
         
@@ -721,6 +732,73 @@ async def submit_feedback(feedback_request: FeedbackRequest):
     except Exception as e:
         print(f"Feedback submission error: {e}")
         raise HTTPException(status_code=500, detail="Failed to submit feedback")
+
+@app.post("/contact")
+async def submit_contact(contact_data: dict):
+    """Submit contact form with notification"""
+    try:
+        
+        # Add notification for admin
+        notification_data = {
+            "type": "contact",
+            "user_name": contact_data.get('userName', 'Anonymous User'),
+            "source": "Contact Form", 
+            "user_email": contact_data.get('userEmail', '')
+        }
+        notification_service.add_notification(notification_data)
+        
+        # Send email (your existing email sending code)
+        email_sent = email_service.send_contact_email(contact_data)
+        
+        if email_sent:
+            return {"status": "success", "message": "Message sent successfully"}
+        else:
+            return {"status": "error", "message": "Failed to send message"}
+            
+    except Exception as e:
+        print(f"Contact form error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to submit contact form")
+    
+
+@app.get("/admin/notifications")
+async def get_admin_notifications():
+    """Get notifications for admin dashboard"""
+    try:
+        unread_count = notification_service.get_unread_count()
+        notifications = notification_service.get_notifications(limit=5)
+        
+        return {
+            "unread_count": unread_count,
+            "notifications": notifications
+        }
+    except Exception as e:
+        print(f"Error getting notifications: {e}")
+        return {"unread_count": 0, "notifications": []}
+
+@app.post("/admin/notifications/mark-read")
+async def mark_notifications_read(notification_data: dict = None):
+    """Mark notifications as read"""
+    try:
+        notification_id = notification_data.get('notification_id') if notification_data else None
+        success = notification_service.mark_as_read(notification_id)
+        
+        if success:
+            return {"status": "success", "message": "Notifications marked as read"}
+        else:
+            return {"status": "error", "message": "Failed to mark notifications as read"}
+    except Exception as e:
+        print(f"Error marking notifications as read: {e}")
+        return {"status": "error", "message": "Internal server error"}
+
+@app.get("/admin/notifications/count")
+async def get_notification_count():
+    """Get only the unread notification count"""
+    try:
+        unread_count = notification_service.get_unread_count()
+        return {"unread_count": unread_count}
+    except Exception as e:
+        print(f"Error getting notification count: {e}")
+        return {"unread_count": 0}
 
 if __name__ == "__main__":
     import uvicorn

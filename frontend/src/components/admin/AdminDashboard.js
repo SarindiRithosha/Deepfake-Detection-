@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react'; 
-import { FaBell, FaChartLine, FaUsers, FaChartBar, FaUserFriends, FaBullseye, FaArrowUp, FaArrowDown, FaMinus, FaUserCircle } from 'react-icons/fa';
+import { FaBell, FaChartLine, FaUsers, FaChartBar, FaUserFriends, FaBullseye, FaArrowUp, FaArrowDown, FaMinus, FaUserCircle, FaComments, FaEnvelope, FaCircle } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 
 function AdminDashboard() {
   const navigate = useNavigate();
   const [activeNav, setActiveNav] = useState('dashboard');
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [adminUser, setAdminUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const [kpiData, setKpiData] = useState({
     totalAnalysis: { value: 0, trend: '+0%', trendType: 'up' },
@@ -16,7 +19,75 @@ function AdminDashboard() {
     modelAccuracy: { value: '90%', trend: '+3%', trendType: 'up' }
   });
 
-    const fetchDashboardData = async () => {
+  // Fetch notifications
+  const fetchNotifications = async () => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch('http://localhost:8000/admin/notifications', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setNotifications(data.notifications || []);
+        setUnreadCount(data.unread_count || 0);
+      }
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error);
+    }
+  };
+
+  // Mark notifications as read
+  const markNotificationsAsRead = async () => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      await fetch('http://localhost:8000/admin/notifications/mark-read', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({})
+      });
+      
+      // Update local state
+      setUnreadCount(0);
+      const updatedNotifications = notifications.map(notification => ({
+        ...notification,
+        read: true
+      }));
+      setNotifications(updatedNotifications);
+    } catch (error) {
+      console.error('Failed to mark notifications as read:', error);
+    }
+  };
+
+  // Handle notification bell click
+  const handleNotificationClick = () => {
+    setShowNotifications(!showNotifications);
+    if (unreadCount > 0 && !showNotifications) {
+      markNotificationsAsRead();
+    }
+  };
+
+  // Close notifications when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.notifications-container') && 
+          !event.target.closest('.notification-bell')) {
+        setShowNotifications(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const fetchDashboardData = async () => {
     try {
       const token = localStorage.getItem('adminToken');
       const response = await fetch('http://localhost:8000/admin/dashboard-stats', {
@@ -45,91 +116,179 @@ function AdminDashboard() {
     }
   };
 
+  useEffect(() => {
+    const checkAdminAuth = async () => {
+      const token = localStorage.getItem('adminToken');
+      const storedAdmin = localStorage.getItem('adminUser');
 
-    useEffect(() => {
-        const checkAdminAuth = async () => {
-        const token = localStorage.getItem('adminToken');
-        const storedAdmin = localStorage.getItem('adminUser');
+      if (!token || !storedAdmin) {
+        navigate('/login');
+        return;
+      }
 
-        if (!token || !storedAdmin) {
-            navigate('/login');
-            return;
+      try {
+        const response = await fetch(`http://localhost:8000/auth/admin/verify?token=${token}`); 
+
+        if (response.ok) {
+          setAdminUser(JSON.parse(storedAdmin));
+          await fetchDashboardData();
+          await fetchNotifications();
+        } else {
+          localStorage.removeItem('adminToken');
+          localStorage.removeItem('adminUser');
+          navigate('/login');
         }
+      } catch (error) {
+        console.error('Admin verification failed:', error);
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUser');
+        navigate('/login');
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-        try {
-            const response = await fetch(`http://localhost:8000/auth/admin/verify?token=${token}`); 
+    checkAdminAuth();
+  }, [navigate]);
 
-
-            if (response.ok) {
-            setAdminUser(JSON.parse(storedAdmin));
-            await fetchDashboardData();
-            } else {
-            // Invalid token, redirect to login
-            localStorage.removeItem('adminToken');
-            localStorage.removeItem('adminUser');
-            navigate('/login');
-            }
-        } catch (error) {
-            console.error('Admin verification failed:', error);
-            localStorage.removeItem('adminToken');
-            localStorage.removeItem('adminUser');
-            navigate('/login');
-        } finally {
-            setIsLoading(false);
-        }
-        };
-
-        checkAdminAuth();
-    }, [navigate]);
-
-     useEffect(() => {
+  useEffect(() => {
     if (activeNav === 'dashboard' && adminUser) {
-      const interval = setInterval(() => {
+      // Fetch notifications every 30 seconds
+      const notificationInterval = setInterval(() => {
+        fetchNotifications();
+      }, 30000);
+
+      // Fetch dashboard data every 30 seconds
+      const dashboardInterval = setInterval(() => {
         fetchDashboardData();
-      }, 30000); 
+      }, 30000);
 
       return () => {
-        clearInterval(interval);
+        clearInterval(notificationInterval);
+        clearInterval(dashboardInterval);
       };
     }
   }, [activeNav, adminUser]);
 
-    const handleLogout = async () => {
-        const token = localStorage.getItem('adminToken');
-        
-        if (token) {
-        try {
-            await fetch('http://localhost:8000/auth/admin-logout', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ token })
-            });
-        } catch (error) {
-            console.error('Logout error:', error);
-        }
-        }
+  const handleLogout = async () => {
+    const token = localStorage.getItem('adminToken');
+    
+    if (token) {
+      try {
+        await fetch('http://localhost:8000/auth/admin-logout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ token })
+        });
+      } catch (error) {
+        console.error('Logout error:', error);
+      }
+    }
 
-        // Clear admin session
-        localStorage.removeItem('adminToken');
-        localStorage.removeItem('adminUser');
-        navigate('/login');
-    };
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUser');
+    navigate('/login');
+  };
 
-    if (isLoading) {
-        return (
-        <div style={adminLayoutStyle}>
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-            <p>Loading Admin Dashboard...</p>
-            </div>
+  // Format timestamp to relative time
+  const formatTimeAgo = (timestamp) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+    
+    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    return `${Math.floor(diffInSeconds / 86400)}d ago`;
+  };
+
+  // Get icon for notification type
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'feedback':
+        return <FaComments style={notificationIconStyle} />;
+      case 'contact':
+        return <FaEnvelope style={notificationIconStyle} />;
+      default:
+        return <FaComments style={notificationIconStyle} />;
+    }
+  };
+
+  // Render notifications dropdown
+  const renderNotificationsDropdown = () => {
+    if (!showNotifications) return null;
+
+    return (
+      <div className="notifications-container" style={notificationsDropdownStyle}>
+        <div style={notificationsHeaderStyle}>
+          <h3 style={notificationsTitleStyle}>Notifications</h3>
+          <span style={notificationsCountStyle}>
+            {notifications.length} total
+          </span>
         </div>
-        );
-    }
+        
+        <div style={notificationsListStyle}>
+          {notifications.length === 0 ? (
+            <div style={emptyNotificationsStyle}>
+              <FaBell style={emptyBellIconStyle} />
+              <p style={emptyTextStyle}>No notifications</p>
+            </div>
+          ) : (
+            notifications.slice(0, 5).map((notification) => (
+              <div key={notification.id} style={notificationItemStyle}>
+                <div style={notificationIconContainerStyle}>
+                  {getNotificationIcon(notification.type)}
+                </div>
+                <div style={notificationContentStyle}>
+                  <div style={notificationTextStyle}>
+                    <span style={userNameStyle}>{notification.user_name}</span>
+                    <span style={notificationSourceStyle}>
+                      {notification.type === 'feedback' ? 'submitted feedback' : 'sent a message'}
+                    </span>
+                  </div>
+                  <div style={notificationMetaStyle}>
+                    <span style={notificationTimeStyle}>
+                      {formatTimeAgo(notification.timestamp)}
+                    </span>
+                    <span style={notificationSourceBadgeStyle}>
+                      {notification.source}
+                    </span>
+                  </div>
+                </div>
+                {!notification.read && (
+                  <FaCircle style={unreadDotStyle} />
+                )}
+              </div>
+            ))
+          )}
+        </div>
+        
+        {notifications.length > 5 && (
+          <div style={notificationsFooterStyle}>
+            <span style={moreNotificationsStyle}>
+              +{notifications.length - 5} more notifications
+            </span>
+          </div>
+        )}
+      </div>
+    );
+  };
 
-    if (!adminUser) {
-        return null;
-    }
+  if (isLoading) {
+    return (
+      <div style={adminLayoutStyle}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+          <p>Loading Admin Dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!adminUser) {
+    return null;
+  }
 
     // Mock data for charts
     const accuracyData = [
@@ -173,31 +332,45 @@ function AdminDashboard() {
 
                 {/* Right (User + Notifications) Section */}
                 <div style={headerRightStyle}>
-                    <button style={iconButtonStyle}>
-                    <FaBell style={bellIconStyle} />
-                    </button>
+                    {/* Notifications Bell */}
+                    <div style={notificationContainerStyle}>
+                        <button 
+                        className="notification-bell"
+                        onClick={handleNotificationClick}
+                        style={iconButtonStyle}
+                        >
+                        <FaBell style={bellIconStyle} />
+                        {unreadCount > 0 && (
+                            <div style={notificationBadgeStyle}>
+                            {unreadCount > 9 ? '9+' : unreadCount}
+                            </div>
+                        )}
+                        </button>
+                        
+                        {/* Notifications Dropdown */}
+                        {renderNotificationsDropdown()}
+                    </div>
 
                     <div style={verticalSeparatorStyle}></div>
 
                     <div style={userDropdownContainerStyle}>
-                    <button
+                        <button
                         style={userButtonStyle}
                         onClick={() => setShowUserDropdown(!showUserDropdown)}
-                    >
+                        >
                         <FaUserCircle style={userCircleStyle} />
                         <span style={adminNameStyle}>Admin</span>
-                    </button>
-                    {showUserDropdown && (
-                        <div style={dropdownMenuStyle}>
-                        <button style={dropdownItemStyle} onClick={handleLogout} >
-                            Logout
                         </button>
+                        {showUserDropdown && (
+                        <div style={dropdownMenuStyle}>
+                            <button style={dropdownItemStyle} onClick={handleLogout}>
+                            Logout
+                            </button>
                         </div>
-                    )}
+                        )}
                     </div>
-                </div>
-            </header>
-
+                    </div>
+                </header>
 
             <div style={mainContainerStyle}>
                 {/* Fixed Navigation Sidebar */}
@@ -522,6 +695,175 @@ const iconButtonStyle = {
 const bellIconStyle = {
   color: "#444", 
   fontSize: "1.4rem"
+};
+
+const notificationContainerStyle = {
+  position: 'relative',
+  display: 'inline-block'
+};
+
+const notificationBadgeStyle = {
+  position: 'absolute',
+  top: '-1px',
+  right: '-5px',
+  backgroundColor: '#ff4444',
+  color: 'white',
+  borderRadius: '50%',
+  width: '18px',
+  height: '18px',
+  fontSize: '0.7rem',
+  fontWeight: 'bold',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  border: '2px solid #E5E3E3'
+};
+
+const notificationsDropdownStyle = {
+  position: 'absolute',
+  top: '100%',
+  right: 0,
+  backgroundColor: 'white',
+  borderRadius: '10px',
+  boxShadow: '0 8px 30px rgba(0, 0, 0, 0.15)',
+  width: '350px',
+  maxHeight: '400px',
+  zIndex: 1002,
+  border: '1px solid #e1e5e9',
+  animation: 'slideDown 0.3s ease-out'
+};
+
+const notificationsHeaderStyle = {
+  padding: '15px 20px',
+  borderBottom: '1px solid #e1e5e9',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center'
+};
+
+const notificationsTitleStyle = {
+  margin: 0,
+  fontSize: '1.1rem',
+  fontWeight: '600',
+  color: '#013D83'
+};
+
+const notificationsCountStyle = {
+  fontSize: '0.8rem',
+  color: '#666',
+  backgroundColor: '#f0f0f0',
+  padding: '2px 8px',
+  borderRadius: '12px'
+};
+
+const notificationsListStyle = {
+  maxHeight: '300px',
+  overflowY: 'auto'
+};
+
+const notificationItemStyle = {
+  padding: '15px 20px',
+  borderBottom: '1px solid #f0f0f0',
+  display: 'flex',
+  alignItems: 'flex-start',
+  gap: '12px',
+  position: 'relative',
+  transition: 'background-color 0.2s ease',
+  cursor: 'pointer'
+};
+
+const notificationIconContainerStyle = {
+  flexShrink: 0,
+  width: '32px',
+  height: '32px',
+  borderRadius: '50%',
+  backgroundColor: '#e7f3ff',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center'
+};
+
+const notificationIconStyle = {
+  color: '#013D83',
+  fontSize: '14px'
+};
+
+const notificationContentStyle = {
+  flex: 1,
+  minWidth: 0
+};
+
+const notificationTextStyle = {
+  marginBottom: '4px',
+  lineHeight: '1.4'
+};
+
+const userNameStyle = {
+  fontWeight: '600',
+  color: '#013D83',
+  marginRight: '4px'
+};
+
+const notificationSourceStyle = {
+  color: '#666',
+  fontSize: '0.9rem'
+};
+
+const notificationMetaStyle = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center'
+};
+
+const notificationTimeStyle = {
+  fontSize: '0.8rem',
+  color: '#999'
+};
+
+const notificationSourceBadgeStyle = {
+  fontSize: '0.7rem',
+  color: '#013D83',
+  backgroundColor: '#e7f3ff',
+  padding: '2px 6px',
+  borderRadius: '8px',
+  fontWeight: '500'
+};
+
+const unreadDotStyle = {
+  color: '#013D83',
+  fontSize: '8px',
+  position: 'absolute',
+  top: '15px',
+  right: '15px'
+};
+
+const emptyNotificationsStyle = {
+  padding: '40px 20px',
+  textAlign: 'center',
+  color: '#999'
+};
+
+const emptyBellIconStyle = {
+  fontSize: '2rem',
+  marginBottom: '10px',
+  opacity: 0.5
+};
+
+const emptyTextStyle = {
+  margin: 0,
+  fontSize: '0.9rem'
+};
+
+const notificationsFooterStyle = {
+  padding: '12px 20px',
+  borderTop: '1px solid #e1e5e9',
+  textAlign: 'center'
+};
+
+const moreNotificationsStyle = {
+  fontSize: '0.8rem',
+  color: '#013D83',
+  fontWeight: '500'
 };
 
 const verticalSeparatorStyle = {
@@ -948,5 +1290,22 @@ const inactiveStatusStyle = {
     minWidth: '70px',
     textAlign: 'center'
 };
+
+const styles = `
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+`;
+
+const styleSheet = document.createElement('style');
+styleSheet.innerText = styles;
+document.head.appendChild(styleSheet);
 
 export default AdminDashboard;

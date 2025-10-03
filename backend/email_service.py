@@ -8,6 +8,9 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import json
 from pydantic import BaseModel
+from datetime import datetime
+from typing import List, Dict
+
 
 load_dotenv()
 
@@ -392,3 +395,104 @@ class EmailService:
 
 # Global email service instance
 email_service = EmailService()
+
+class NotificationService:
+    def __init__(self):
+        self.notifications_file = "admin_notifications.json"
+        self._initialize_notifications_file()
+    
+    def _initialize_notifications_file(self):
+        """Initialize notifications file if it doesn't exist"""
+        try:
+            with open(self.notifications_file, 'r') as f:
+                pass
+        except FileNotFoundError:
+            with open(self.notifications_file, 'w') as f:
+                json.dump({"notifications": [], "last_id": 0}, f)
+    
+    def add_notification(self, notification_data: Dict) -> int:
+        """Add a new notification and return its ID"""
+        try:
+            with open(self.notifications_file, 'r') as f:
+                data = json.load(f)
+            
+            notification_id = data["last_id"] + 1
+            notification = {
+                "id": notification_id,
+                "type": notification_data["type"],  # "feedback" or "contact"
+                "user_name": notification_data["user_name"],
+                "user_email": notification_data.get("user_email", ""),
+                "source": notification_data["source"],
+                "timestamp": datetime.now().isoformat(),
+                "read": False
+            }
+            
+            data["notifications"].insert(0, notification)  # Add to beginning
+            data["last_id"] = notification_id
+            
+            # Keep only last 100 notifications to prevent file from growing too large
+            if len(data["notifications"]) > 100:
+                data["notifications"] = data["notifications"][:100]
+            
+            with open(self.notifications_file, 'w') as f:
+                json.dump(data, f, indent=2)
+            
+            return notification_id
+            
+        except Exception as e:
+            print(f"Error adding notification: {e}")
+            return -1
+    
+    def get_unread_count(self) -> int:
+        """Get count of unread notifications"""
+        try:
+            with open(self.notifications_file, 'r') as f:
+                data = json.load(f)
+            
+            unread_count = sum(1 for notification in data["notifications"] if not notification["read"])
+            return unread_count
+            
+        except Exception as e:
+            print(f"Error getting unread count: {e}")
+            return 0
+    
+    def get_notifications(self, limit: int = 5) -> List[Dict]:
+        """Get latest notifications (max 5 by default)"""
+        try:
+            with open(self.notifications_file, 'r') as f:
+                data = json.load(f)
+            
+            notifications = data["notifications"][:limit]  # Get latest notifications
+            return notifications
+            
+        except Exception as e:
+            print(f"Error getting notifications: {e}")
+            return []
+    
+    def mark_as_read(self, notification_id: int = None) -> bool:
+        """Mark specific notification as read, or mark all as read if no ID provided"""
+        try:
+            with open(self.notifications_file, 'r') as f:
+                data = json.load(f)
+            
+            if notification_id:
+                # Mark specific notification as read
+                for notification in data["notifications"]:
+                    if notification["id"] == notification_id:
+                        notification["read"] = True
+                        break
+            else:
+                # Mark all notifications as read
+                for notification in data["notifications"]:
+                    notification["read"] = True
+            
+            with open(self.notifications_file, 'w') as f:
+                json.dump(data, f, indent=2)
+            
+            return True
+            
+        except Exception as e:
+            print(f"Error marking notification as read: {e}")
+            return False
+        
+notification_service = NotificationService()

@@ -1,2 +1,6 @@
 {"timestamp": "2025-10-03T06:54:00.341Z", "rating": 3, "feedback": "I really like the Ui and how informative the results page id", "analysis_id": "YOUTUBE_20251003_112807", "prediction": "FAKE", "confidence": 0.89, "source": "url"}
 {"timestamp": "2025-10-03T06:56:40.335Z", "rating": 4, "feedback": "I really like it. Good Job.", "analysis_id": "YOUTUBE_20251003_112807", "prediction": "FAKE", "confidence": 0.89, "source": "url"}
+{"timestamp": "2025-10-03T07:36:16.947Z", "rating": 4, "feedback": "hi", "analysis_id": "YOUTUBE_20251003_112807", "prediction": "FAKE", "confidence": 0.89, "source": "url"}
+{"timestamp": "2025-10-03T07:50:15.028Z", "rating": 4, "feedback": "hi", "analysis_id": "YOUTUBE_20251003_112807", "prediction": "FAKE", "confidence": 0.89, "source": "url"}
+{"timestamp": "2025-10-03T07:54:05.195Z", "rating": 4, "feedback": "jjjj", "analysis_id": "VID_20251003_132353", "prediction": "REAL", "confidence": 0.98, "source": "file"}
+{"timestamp": "2025-10-03T07:55:26.503Z", "rating": 4, "feedback": "hi", "analysis_id": "VID_20251003_132516", "prediction": "REAL", "confidence": 0.92, "source": "file"}

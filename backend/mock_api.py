@@ -17,8 +17,6 @@ import json
 from typing import List
 import tempfile
 from admin_router import router as admin_router
-
-# Add these imports for URL functionality
 import requests
 import re
 from urllib.parse import urlparse, parse_qs
@@ -26,6 +24,8 @@ from pydantic import BaseModel
 import yt_dlp  
 import subprocess
 import shutil
+from email_service import email_service, FeedbackRequest
+
 
 app = FastAPI(title="Verity-X API", version="1.0.0")
 
@@ -685,6 +685,42 @@ async def cleanup_video_file(analysis_id: str):
         return {"message": f"Deleted {deleted_count} video files for analysis {analysis_id}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Cleanup failed: {str(e)}")
+    
+@app.post("/submit-feedback")
+async def submit_feedback(feedback_request: FeedbackRequest):
+    """Endpoint to receive user feedback"""
+    try:
+        print(f"Received feedback - Rating: {feedback_request.rating}, Analysis: {feedback_request.analysis_id}")
+        
+        # Save feedback to a file for logging
+        feedback_log = {
+            "timestamp": feedback_request.timestamp,
+            "rating": feedback_request.rating,
+            "feedback": feedback_request.feedback,
+            "analysis_id": feedback_request.analysis_id,
+            "prediction": feedback_request.prediction,
+            "confidence": feedback_request.confidence,
+            "source": feedback_request.source
+        }
+        
+        # Log feedback to JSON file
+        try:
+            with open("user_feedback.json", "a") as f:
+                f.write(json.dumps(feedback_log) + "\n")
+        except Exception as e:
+            print(f"Error logging feedback: {e}")
+        
+        # Send email notification
+        email_sent = email_service.send_feedback_email(feedback_request)
+        
+        if email_sent:
+            return {"status": "success", "message": "Feedback submitted successfully"}
+        else:
+            return {"status": "error", "message": "Failed to send feedback email"}
+            
+    except Exception as e:
+        print(f"Feedback submission error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to submit feedback")
 
 if __name__ == "__main__":
     import uvicorn

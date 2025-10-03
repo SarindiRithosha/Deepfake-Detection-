@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { generatePDFReport, generateTextReport } from '../utils/pdfGenerator';
+import { FaComment, FaPaperPlane, FaTimes, FaStar } from 'react-icons/fa';
 
 function Results() {
   const location = useLocation();
@@ -11,9 +12,17 @@ function Results() {
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [loading, setLoading] = useState(true);
   const [videoUrl, setVideoUrl] = useState(null);
-  const [videoSource, setVideoSource] = useState(null); // 'file' or 'url'
+  const [videoSource, setVideoSource] = useState(null);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedback, setFeedback] = useState('');
+  const [rating, setRating] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState(null);
+  const [isAtBottom, setIsAtBottom] = useState(false);
   const resultsRef = useRef(null);
   const videoRef = useRef(null);
+  const feedbackRef = useRef(null);
+  const ctaContainerRef = useRef(null);
 
   // Memoized cleanup function
   const cleanupVideoUrl = useCallback(() => {
@@ -21,6 +30,40 @@ function Results() {
       URL.revokeObjectURL(videoUrl);
     }
   }, [videoUrl, videoSource]);
+
+  // Handle scroll to detect when user reaches the CTA buttons section
+  useEffect(() => {
+    const handleScroll = () => {
+      if (ctaContainerRef.current) {
+        const ctaRect = ctaContainerRef.current.getBoundingClientRect();
+        const isVisible = ctaRect.top <= window.innerHeight && ctaRect.bottom >= 0;
+        setIsAtBottom(isVisible);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    handleScroll(); // Initial check
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
+  // Close feedback when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (feedbackRef.current && !feedbackRef.current.contains(event.target)) {
+        if (!event.target.closest('.feedback-button')) {
+          setShowFeedback(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const fetchMockData = async () => {
     try {
@@ -55,7 +98,6 @@ function Results() {
   };
 
   const handleAnalyzeAnother = () => {
-    // Clean up video URL before navigating
     cleanupVideoUrl();
     navigate('/detect');
   };
@@ -78,7 +120,50 @@ function Results() {
     }
   };
 
-  // Render video player based on source type
+  // Feedback functions
+  const handleFeedbackSubmit = async () => {
+    if (!feedback.trim() && rating === 0) {
+      setSubmitStatus('Please provide either a rating or feedback');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitStatus(null);
+
+    try {
+      const feedbackData = {
+        feedback: feedback.trim(),
+        rating: rating,
+        analysis_id: analysisData?.analysis_id || 'unknown',
+        prediction: analysisData?.prediction || 'unknown',
+        confidence: analysisData?.confidence || 0,
+        source: videoSource,
+        timestamp: new Date().toISOString()
+      };
+
+      const response = await axios.post('http://localhost:8000/submit-feedback', feedbackData);
+      
+      if (response.status === 200) {
+        setSubmitStatus('success');
+        setFeedback('');
+        setRating(0);
+        setTimeout(() => {
+          setShowFeedback(false);
+          setSubmitStatus(null);
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('Feedback submission error:', error);
+      setSubmitStatus('error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleStarClick = (starRating) => {
+    setRating(starRating);
+  };
+
   const renderVideoPlayer = () => {
     if (videoSource === 'file' && videoUrl) {
       return (
@@ -96,53 +181,44 @@ function Results() {
           Your browser does not support the video tag.
         </video>
       );
-
-    }// In the renderVideoPlayer function, update the URL video section:
-  else if (videoSource === 'url' && analysisData?.original_url) {
-    const videoDownloadUrl = `http://localhost:8000/video/${analysisData.analysis_id}`;
-    
-    return (
-      <div style={urlVideoInfoStyle}>
-        <div style={urlVideoHeaderStyle}>
-          <img
-            src={process.env.PUBLIC_URL + "/link.png"}
-            alt="Link"
-            width="40"
-            height="40"
-            style={{ marginRight: '10px' }}
-          />
-          <div>
-            <h3 style={urlVideoTitleStyle}>Video from {analysisData.source_name || 'URL'}</h3>
-            <p style={urlVideoTextStyle}>
-              Original URL: <a href={analysisData.original_url} target="_blank" rel="noopener noreferrer" style={urlLinkStyle}>
-                {analysisData.original_url}
-              </a>
-            </p>
-            {/* <div style={downloadLinksStyle}>
-              <a href={videoDownloadUrl} download style={downloadLinkStyle}>
-                Download Analyzed Video
-              </a>
-            </div> */}
+    } else if (videoSource === 'url' && analysisData?.original_url) {
+      const videoDownloadUrl = `http://localhost:8000/video/${analysisData.analysis_id}`;
+      
+      return (
+        <div style={urlVideoInfoStyle}>
+          <div style={urlVideoHeaderStyle}>
+            <img
+              src={process.env.PUBLIC_URL + "/link.png"}
+              alt="Link"
+              width="40"
+              height="40"
+              style={{ marginRight: '10px' }}
+            />
+            <div>
+              <h3 style={urlVideoTitleStyle}>Video from {analysisData.source_name || 'URL'}</h3>
+              <p style={urlVideoTextStyle}>
+                Original URL: <a href={analysisData.original_url} target="_blank" rel="noopener noreferrer" style={urlLinkStyle}>
+                  {analysisData.original_url}
+                </a>
+              </p>
+            </div>
           </div>
+          
+          <video
+            ref={videoRef}
+            controls
+            style={videoPlayerStyle}
+            onError={(e) => {
+              console.error('Video playback error:', e);
+              e.target.src = analysisData.original_url;
+            }}
+          >
+            <source src={videoDownloadUrl} type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
         </div>
-        
-        {/* Show the downloaded video */}
-        <video
-          ref={videoRef}
-          controls
-          style={videoPlayerStyle}
-          onError={(e) => {
-            console.error('Video playback error:', e);
-            // Fallback to original URL
-            e.target.src = analysisData.original_url;
-          }}
-        >
-          <source src={videoDownloadUrl} type="video/mp4" />
-          Your browser does not support the video tag.
-        </video>
-      </div>
-    );
-  } else {
+      );
+    } else {
       return (
         <div style={videoPlaceholderStyle}>
           <p>Video Player Placeholder</p>
@@ -157,17 +233,97 @@ function Results() {
     }
   };
 
+  // Render Star Rating
+  const renderStarRating = () => {
+    return (
+      <div style={starRatingContainerStyle}>
+        <p style={ratingLabelStyle}>Rate your experience:</p>
+        <div style={starsContainerStyle}>
+          {[1, 2, 3, 4, 5].map((star) => (
+            <FaStar
+              key={star}
+              style={{
+                ...starStyle,
+                color: star <= rating ? '#FFD700' : '#ccc',
+                cursor: 'pointer'
+              }}
+              onClick={() => handleStarClick(star)}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Render Feedback Widget
+  const renderFeedbackWidget = () => {
+    if (!showFeedback) return null;
+
+    return (
+      <div ref={feedbackRef} style={feedbackWidgetStyle}>
+        <div style={feedbackHeaderStyle}>
+          <h3 style={feedbackTitleStyle}>Share Your Feedback</h3>
+          <button 
+            onClick={() => setShowFeedback(false)}
+            style={closeButtonStyle}
+          >
+            <FaTimes size={14} />
+          </button>
+        </div>
+        
+        <div style={feedbackContentStyle}>
+          {renderStarRating()}
+          
+          <textarea
+            value={feedback}
+            onChange={(e) => setFeedback(e.target.value)}
+            placeholder="Tell us about your experience with Verity-X... What did you like? What can we improve?"
+            style={feedbackTextareaStyle}
+            rows="4"
+          />
+          
+          {submitStatus && (
+            <div style={
+              submitStatus === 'success' ? 
+              successMessageStyle : 
+              errorMessageStyle
+            }>
+              {submitStatus === 'success' 
+                ? 'Thank you for your feedback!' 
+                : submitStatus
+              }
+            </div>
+          )}
+          
+          <button
+            onClick={handleFeedbackSubmit}
+            disabled={isSubmitting || (!feedback.trim() && rating === 0)}
+            style={{
+              ...submitButtonStyle,
+              opacity: (isSubmitting || (!feedback.trim() && rating === 0)) ? 0.6 : 1
+            }}
+          >
+            {isSubmitting ? (
+              'Sending...'
+            ) : (
+              <>
+                <FaPaperPlane style={{ marginRight: '8px' }} />
+                Send Feedback
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   useEffect(() => {
     if (location.state?.analysisData) {
       setAnalysisData(location.state.analysisData);
       
-      // Check if we have a file upload or URL upload
       if (location.state.uploadedFile) {
         const file = location.state.uploadedFile;
-        
-        // Check if it's a real File object (file upload) or mock object (URL upload)
         if (file instanceof File || (file.name && file.type)) {
-          // It's a file upload - create object URL
           try {
             const url = URL.createObjectURL(file);
             setVideoUrl(url);
@@ -177,11 +333,9 @@ function Results() {
             setVideoSource('none');
           }
         } else {
-          // It's a URL upload - no local file to display
           setVideoSource('url');
         }
       } else {
-        // No uploaded file (URL upload)
         setVideoSource('url');
       }
       
@@ -190,11 +344,10 @@ function Results() {
       fetchMockData();
     }
 
-    // Clean up object URL when component unmounts
     return () => {
       cleanupVideoUrl();
     };
-  }, [location, cleanupVideoUrl]); // Added missing dependencies
+  }, [location, cleanupVideoUrl]);
 
   if (loading) {
     return (
@@ -226,6 +379,22 @@ function Results() {
 
   return (
     <div id="results-container" ref={resultsRef} style={pageStyle}>
+      <button
+        className="feedback-button"
+        onClick={() => setShowFeedback(!showFeedback)}
+        style={{
+          ...feedbackButtonStyle,
+          position: isAtBottom ? 'absolute' : 'fixed',
+          bottom: isAtBottom ? '20px' : '30px',
+          right: isAtBottom ? '20px' : '30px',
+        }}
+      >
+        <FaComment size={20} />
+      </button>
+
+      {/* Feedback Widget */}
+      {renderFeedbackWidget()}
+
       <div style={headerStyle}>
         <h1 style={titleStyle}>Results</h1>
         
@@ -240,7 +409,6 @@ function Results() {
           Confidence: {Math.round(analysisData.confidence * 100)}%
         </p>
 
-        {/* Show source information for URL uploads */}
         {analysisData.source && analysisData.source !== 'file' && (
           <div style={sourceBadgeStyle}>
             Source: {analysisData.source_name || analysisData.source}
@@ -340,7 +508,8 @@ function Results() {
         )}
       </div>
 
-      <div style={ctaContainerStyle}>
+      {/* CTA Container with relative positioning for the feedback button */}
+      <div ref={ctaContainerRef} style={{ ...ctaContainerStyle, position: 'relative' }}>
         <button onClick={handleAnalyzeAnother} style={analyzeAnotherButtonStyle}>
           Analyze Another Video
         </button>
@@ -358,6 +527,139 @@ const pageStyle = {
   backgroundColor: '#E5E3E3',
   minHeight: '100vh',
   padding: '2rem 1rem',
+  position: 'relative',
+};
+
+// Feedback Styles
+const feedbackButtonStyle = {
+  width: '60px',
+  height: '60px',
+  borderRadius: '50%',
+  backgroundColor: '#013D83',
+  color: 'white',
+  border: 'none',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  boxShadow: '0 4px 15px rgba(1, 61, 131, 0.3)',
+  zIndex: 1000,
+  transition: 'all 0.3s ease',
+};
+
+const feedbackWidgetStyle = {
+  position: 'fixed',
+  bottom: '100px',
+  right: '30px',
+  width: '350px',
+  backgroundColor: 'white',
+  borderRadius: '12px',
+  boxShadow: '0 8px 30px rgba(0, 0, 0, 0.15)',
+  zIndex: 1001,
+  border: '1px solid #e1e5e9',
+  animation: 'slideUp 0.3s ease-out',
+};
+
+const feedbackHeaderStyle = {
+  backgroundColor: '#013D83',
+  color: 'white',
+  padding: '15px 20px',
+  borderRadius: '12px 12px 0 0',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+};
+
+const feedbackTitleStyle = {
+  margin: 0,
+  fontSize: '1.1rem',
+  fontWeight: '600',
+};
+
+const closeButtonStyle = {
+  background: 'none',
+  border: 'none',
+  color: 'white',
+  cursor: 'pointer',
+  padding: '5px',
+  borderRadius: '50%',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+};
+
+const feedbackContentStyle = {
+  padding: '20px',
+};
+
+const starRatingContainerStyle = {
+  marginBottom: '15px',
+};
+
+const ratingLabelStyle = {
+  margin: '0 0 10px 0',
+  fontSize: '0.9rem',
+  color: '#333',
+  fontWeight: '500',
+};
+
+const starsContainerStyle = {
+  display: 'flex',
+  gap: '5px',
+  marginBottom: '15px',
+};
+
+const starStyle = {
+  fontSize: '24px',
+  transition: 'color 0.2s ease',
+};
+
+const feedbackTextareaStyle = {
+  width: '100%',
+  padding: '12px',
+  border: '1px solid #ddd',
+  borderRadius: '8px',
+  fontSize: '0.9rem',
+  resize: 'vertical',
+  fontFamily: 'inherit',
+  marginBottom: '15px',
+  minHeight: '80px',
+};
+
+const submitButtonStyle = {
+  width: '100%',
+  padding: '12px',
+  backgroundColor: '#013D83',
+  color: 'white',
+  border: 'none',
+  borderRadius: '8px',
+  fontSize: '0.9rem',
+  fontWeight: '600',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  transition: 'all 0.3s ease',
+};
+
+const successMessageStyle = {
+  backgroundColor: '#d4edda',
+  color: '#155724',
+  padding: '10px',
+  borderRadius: '6px',
+  fontSize: '0.85rem',
+  marginBottom: '15px',
+  textAlign: 'center',
+};
+
+const errorMessageStyle = {
+  backgroundColor: '#f8d7da',
+  color: '#721c24',
+  padding: '10px',
+  borderRadius: '6px',
+  fontSize: '0.85rem',
+  marginBottom: '15px',
+  textAlign: 'center',
 };
 
 const loadingStyle = {
@@ -715,6 +1017,22 @@ const styles = `
   @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 `;
 

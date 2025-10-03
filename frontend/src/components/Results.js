@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { generatePDFReport, generateTextReport } from '../utils/pdfGenerator';
@@ -7,35 +7,20 @@ function Results() {
   const location = useLocation();
   const navigate = useNavigate();
   const [analysisData, setAnalysisData] = useState(null);
-  const [uploadedFile, setUploadedFile] = useState(null);
   const [selectedFrame, setSelectedFrame] = useState(0);
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [loading, setLoading] = useState(true);
   const [videoUrl, setVideoUrl] = useState(null);
+  const [videoSource, setVideoSource] = useState(null); // 'file' or 'url'
   const resultsRef = useRef(null);
   const videoRef = useRef(null);
 
-  useEffect(() => {
-    if (location.state?.analysisData && location.state?.uploadedFile) {
-      setAnalysisData(location.state.analysisData);
-      setUploadedFile(location.state.uploadedFile);
-      
-      // Create object URL for the uploaded video file
-      const url = URL.createObjectURL(location.state.uploadedFile);
-      setVideoUrl(url);
-      
-      setLoading(false);
-    } else {
-      fetchMockData();
+  // Memoized cleanup function
+  const cleanupVideoUrl = useCallback(() => {
+    if (videoUrl && videoSource === 'file') {
+      URL.revokeObjectURL(videoUrl);
     }
-
-    // Clean up object URL when component unmounts
-    return () => {
-      if (videoUrl) {
-        URL.revokeObjectURL(videoUrl);
-      }
-    };
-  }, [location]);
+  }, [videoUrl, videoSource]);
 
   const fetchMockData = async () => {
     try {
@@ -52,6 +37,7 @@ function Results() {
         filename: 'demo_video.mp4',
         model_version: 'XceptionNet v3.2'
       });
+      setVideoSource('none');
     } catch (error) {
       console.error('API not available, using fallback data');
       setAnalysisData({
@@ -63,15 +49,14 @@ function Results() {
         analysis_id: 'FALLBACK_123',
         filename: 'test_video.mp4'
       });
+      setVideoSource('none');
     }
     setLoading(false);
   };
 
   const handleAnalyzeAnother = () => {
     // Clean up video URL before navigating
-    if (videoUrl) {
-      URL.revokeObjectURL(videoUrl);
-    }
+    cleanupVideoUrl();
     navigate('/detect');
   };
 
@@ -92,6 +77,124 @@ function Results() {
       URL.revokeObjectURL(url);
     }
   };
+
+  // Render video player based on source type
+  const renderVideoPlayer = () => {
+    if (videoSource === 'file' && videoUrl) {
+      return (
+        <video
+          ref={videoRef}
+          controls
+          style={videoPlayerStyle}
+          src={videoUrl}
+          onError={(e) => {
+            console.error('Video playback error:', e);
+            e.target.style.display = 'none';
+            e.target.nextSibling.style.display = 'block';
+          }}
+        >
+          Your browser does not support the video tag.
+        </video>
+      );
+
+    }// In the renderVideoPlayer function, update the URL video section:
+  else if (videoSource === 'url' && analysisData?.original_url) {
+    const videoDownloadUrl = `http://localhost:8000/video/${analysisData.analysis_id}`;
+    
+    return (
+      <div style={urlVideoInfoStyle}>
+        <div style={urlVideoHeaderStyle}>
+          <img
+            src={process.env.PUBLIC_URL + "/link.png"}
+            alt="Link"
+            width="40"
+            height="40"
+            style={{ marginRight: '10px' }}
+          />
+          <div>
+            <h3 style={urlVideoTitleStyle}>Video from {analysisData.source_name || 'URL'}</h3>
+            <p style={urlVideoTextStyle}>
+              Original URL: <a href={analysisData.original_url} target="_blank" rel="noopener noreferrer" style={urlLinkStyle}>
+                {analysisData.original_url}
+              </a>
+            </p>
+            {/* <div style={downloadLinksStyle}>
+              <a href={videoDownloadUrl} download style={downloadLinkStyle}>
+                Download Analyzed Video
+              </a>
+            </div> */}
+          </div>
+        </div>
+        
+        {/* Show the downloaded video */}
+        <video
+          ref={videoRef}
+          controls
+          style={videoPlayerStyle}
+          onError={(e) => {
+            console.error('Video playback error:', e);
+            // Fallback to original URL
+            e.target.src = analysisData.original_url;
+          }}
+        >
+          <source src={videoDownloadUrl} type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+      </div>
+    );
+  } else {
+      return (
+        <div style={videoPlaceholderStyle}>
+          <p>Video Player Placeholder</p>
+          <p style={videoPlaceholderSubtext}>
+            {videoSource === 'url' 
+              ? 'Video processed from external URL' 
+              : '(No video file available for playback)'
+            }
+          </p>
+        </div>
+      );
+    }
+  };
+
+  useEffect(() => {
+    if (location.state?.analysisData) {
+      setAnalysisData(location.state.analysisData);
+      
+      // Check if we have a file upload or URL upload
+      if (location.state.uploadedFile) {
+        const file = location.state.uploadedFile;
+        
+        // Check if it's a real File object (file upload) or mock object (URL upload)
+        if (file instanceof File || (file.name && file.type)) {
+          // It's a file upload - create object URL
+          try {
+            const url = URL.createObjectURL(file);
+            setVideoUrl(url);
+            setVideoSource('file');
+          } catch (error) {
+            console.error('Error creating object URL:', error);
+            setVideoSource('none');
+          }
+        } else {
+          // It's a URL upload - no local file to display
+          setVideoSource('url');
+        }
+      } else {
+        // No uploaded file (URL upload)
+        setVideoSource('url');
+      }
+      
+      setLoading(false);
+    } else {
+      fetchMockData();
+    }
+
+    // Clean up object URL when component unmounts
+    return () => {
+      cleanupVideoUrl();
+    };
+  }, [location, cleanupVideoUrl]); // Added missing dependencies
 
   if (loading) {
     return (
@@ -136,29 +239,17 @@ function Results() {
         <p style={{...confidenceStyle, color: confidenceColor}}>
           Confidence: {Math.round(analysisData.confidence * 100)}%
         </p>
+
+        {/* Show source information for URL uploads */}
+        {analysisData.source && analysisData.source !== 'file' && (
+          <div style={sourceBadgeStyle}>
+            Source: {analysisData.source_name || analysisData.source}
+          </div>
+        )}
       </div>
 
       <div style={videoContainerStyle}>
-        {videoUrl ? (
-          <video
-            ref={videoRef}
-            controls
-            style={videoPlayerStyle}
-            src={videoUrl}
-            onError={(e) => {
-              console.error('Video playback error:', e);
-              e.target.style.display = 'none';
-              e.target.nextSibling.style.display = 'block';
-            }}
-          >
-            Your browser does not support the video tag.
-          </video>
-        ) : (
-          <div style={videoPlaceholderStyle}>
-            <p>Video Player Placeholder</p>
-            <p style={videoPlaceholderSubtext}>(No video file available for playback)</p>
-          </div>
-        )}
+        {renderVideoPlayer()}
       </div>
 
       {hasFrames && (
@@ -317,6 +408,17 @@ const confidenceStyle = {
   margin: '0',
 };
 
+const sourceBadgeStyle = {
+  backgroundColor: '#A9D6E5',
+  color: '#013D83',
+  padding: '0.5rem 1rem',
+  borderRadius: '20px',
+  fontSize: '0.9rem',
+  fontWeight: '600',
+  marginTop: '0.5rem',
+  display: 'inline-block',
+};
+
 const videoContainerStyle = {
   display: 'flex',
   justifyContent: 'center',
@@ -333,6 +435,40 @@ const videoPlayerStyle = {
   height: '360px',
   borderRadius: '10px',
   backgroundColor: '#000',
+};
+
+// New styles for URL video info
+const urlVideoInfoStyle = {
+  width: '100%',
+  maxWidth: '640px',
+};
+
+const urlVideoHeaderStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  marginBottom: '1rem',
+  padding: '1rem',
+  backgroundColor: '#f8f9fa',
+  borderRadius: '8px',
+};
+
+const urlVideoTitleStyle = {
+  color: '#013D83',
+  fontSize: '1.2rem',
+  fontWeight: '600',
+  margin: '0 0 0.25rem 0',
+};
+
+const urlVideoTextStyle = {
+  color: '#666',
+  fontSize: '0.9rem',
+  margin: '0',
+};
+
+const urlLinkStyle = {
+  color: '#013D83',
+  textDecoration: 'none',
+  wordBreak: 'break-all',
 };
 
 const videoPlaceholderStyle = {
@@ -439,10 +575,6 @@ const toggleButtonStyle = {
   fontWeight: '500',
   cursor: 'pointer',
   transition: 'all 0.3s ease',
-};
-
-toggleButtonStyle[':hover'] = {
-  backgroundColor: '#8BC3D9',
 };
 
 const selectedFrameContainerStyle = {
@@ -556,11 +688,6 @@ const analyzeAnotherButtonStyle = {
   transition: 'all 0.3s ease',
 };
 
-analyzeAnotherButtonStyle[':hover'] = {
-  backgroundColor: '#8BC3D9',
-  transform: 'translateY(-2px)',
-};
-
 const downloadReportButtonStyle = {
   backgroundColor: '#E5E3E3',
   color: '#013D83',
@@ -571,11 +698,6 @@ const downloadReportButtonStyle = {
   cursor: 'pointer',
   fontSize: '1rem',
   transition: 'all 0.3s ease',
-};
-
-downloadReportButtonStyle[':hover'] = {
-  backgroundColor: '#D5D3D3',
-  transform: 'translateY(-2px)',
 };
 
 const ctaButtonStyle = {

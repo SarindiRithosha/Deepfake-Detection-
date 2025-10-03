@@ -289,6 +289,7 @@ async def resend_otp(email_data: PasswordResetRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to resend OTP")
 
+# auth_router.py - Simple version without timestamps
 @router.get("/user/{uid}")
 async def get_user_profile(uid: str):
     """Get user profile information"""
@@ -300,11 +301,13 @@ async def get_user_profile(uid: str):
         if user_data.exists:
             profile_data = user_data.to_dict()
             
+            # Update last login and online status
             user_ref.update({
                 'last_login': firestore.SERVER_TIMESTAMP,
                 'is_online': True
             })
             
+            # Return only simple, serializable data
             return {
                 "uid": uid,
                 "name": user.display_name,
@@ -312,14 +315,15 @@ async def get_user_profile(uid: str):
                 "email_verified": user.email_verified,
                 "analysis_count": profile_data.get("analysis_count", 0),
                 "max_uploads": profile_data.get("max_uploads", 50),
-                "created_at": profile_data.get("created_at"),
-                "last_login": firestore.SERVER_TIMESTAMP,  
                 "is_online": True
             }
         else:
             raise HTTPException(status_code=404, detail="User profile not found")
     except FirebaseError as e:
         raise HTTPException(status_code=404, detail="User not found")
+    except Exception as e:
+        print(f"Error in get_user_profile: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch user profile")
     
 @router.put("/user/{uid}")
 async def update_user_profile(uid: str, user_update: dict):

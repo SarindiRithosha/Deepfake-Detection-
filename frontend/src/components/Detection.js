@@ -5,9 +5,11 @@ import axios from 'axios';
 
 function Detection() {
   const [file, setFile] = useState(null);
+  const [videoUrl, setVideoUrl] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
   const [status, setStatus] = useState('idle');
   const [showLimitModal, setShowLimitModal] = useState(false);
+  const [uploadMethod, setUploadMethod] = useState('file'); // 'file' or 'url'
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
   const { currentUser, uploadCount, incrementUploadCount, canUpload, getUploadLimit } = useAuth();
@@ -86,6 +88,67 @@ function Detection() {
     }
   };
 
+  const handleUrlUpload = async () => {
+    // Check upload limit before proceeding
+    if (!canUpload()) {
+      setShowLimitModal(true);
+      return;
+    }
+
+    // Validate URL
+    if (!videoUrl.trim()) {
+      setStatus('urlError');
+      return;
+    }
+
+    // Basic URL validation
+    try {
+      new URL(videoUrl);
+    } catch (error) {
+      setStatus('urlError');
+      return;
+    }
+
+    setStatus('uploading');
+
+    try {
+      const response = await axios.post('http://localhost:8000/analyze-url', {
+        video_url: videoUrl
+      }, {
+        timeout: 300000,
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 100) / (progressEvent.total || 100)
+          );
+          setUploadProgress(percentCompleted);
+        },
+      });
+
+      // Increment upload count on successful upload
+      await incrementUploadCount();
+      
+      setStatus('processing');
+      
+      setTimeout(() => {
+        navigate('/results', { 
+          state: { 
+            analysisData: response.data,
+            uploadedFile: null, 
+            videoUrl: videoUrl 
+          } 
+        });
+      }, 3000);
+
+    } catch (error) {
+      console.error('URL upload error:', error);
+      if (error.response?.status === 400) {
+        setStatus('urlError');
+      } else {
+        setStatus('urlError');
+      }
+    }
+  };
+
   const handleDrop = (e) => {
     e.preventDefault();
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
@@ -103,6 +166,7 @@ function Detection() {
 
   const handleTryAgain = () => {
     setFile(null);
+    setVideoUrl('');
     setUploadProgress(0);
     setStatus('idle');
   };
@@ -115,11 +179,21 @@ function Detection() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  // Extract domain from URL for display
+  const getUrlDomain = (url) => {
+    try {
+      const domain = new URL(url).hostname.replace('www.', '');
+      return domain;
+    } catch {
+      return 'unknown';
+    }
+  };
+
   return (
     <div style={pageStyle}>
       <div style={headerStyle}>
         <h1 style={titleStyle}>Upload Your Video for Analysis</h1>
-        <p style={subtitleStyle}>Upload your video file and let our AI detect deepfake content</p>
+        <p style={subtitleStyle}>Upload your video file or provide a URL and let our AI detect deepfake content</p>
       </div>
 
       {/* Upload Limit Info */}
@@ -143,6 +217,22 @@ function Detection() {
         )}
       </div>
 
+      {/* Upload Method Selector */}
+      <div style={methodSelectorStyle}>
+        <button
+          style={uploadMethod === 'file' ? activeMethodButtonStyle : methodButtonStyle}
+          onClick={() => setUploadMethod('file')}
+        >
+          Upload File
+        </button>
+        <button
+          style={uploadMethod === 'url' ? activeMethodButtonStyle : methodButtonStyle}
+          onClick={() => setUploadMethod('url')}
+        >
+          Insert URL
+        </button>
+      </div>
+
       <div style={containerStyle}>
         <input
           type="file"
@@ -152,7 +242,7 @@ function Detection() {
           onChange={(e) => e.target.files[0] && handleFileChange(e.target.files[0])}
         />
 
-        {status === 'idle' && (
+        {status === 'idle' && uploadMethod === 'file' && (
           <div
             style={dropZoneStyle}
             onDrop={handleDrop}
@@ -174,7 +264,38 @@ function Detection() {
           </div>
         )}
 
-        {status === 'uploading' && file && (
+        {status === 'idle' && uploadMethod === 'url' && (
+          <div style={urlContainerStyle}>
+            <img
+              src={process.env.PUBLIC_URL + "/link.png"}
+              alt="Link"
+              width="80"
+              height="80"
+              style={iconStyle}
+            />
+            <p style={dragTextStyle}>Insert Video URL</p>
+            
+            <div style={urlInputContainerStyle}>
+              <input
+                type="url"
+                placeholder="https://youtube.com/watch?v=..."
+                value={videoUrl}
+                onChange={(e) => setVideoUrl(e.target.value)}
+                style={urlInputStyle}
+              />
+              <button 
+                style={urlUploadButtonStyle}
+                onClick={handleUrlUpload}
+                disabled={!videoUrl.trim()}
+              >
+                Analyze URL
+              </button>
+            </div>
+            
+          </div>
+        )}
+
+        {status === 'uploading' && file && uploadMethod === 'file' && (
           <div style={uploadingStyle}>
             <img
               src={process.env.PUBLIC_URL + "/video-file.png"}
@@ -195,6 +316,31 @@ function Detection() {
           </div>
         )}
 
+        {status === 'uploading' && uploadMethod === 'url' && (
+          <div style={uploadingStyle}>
+            <img
+              src={process.env.PUBLIC_URL + "/link.png"}
+              alt="Video URL"
+              width="80"
+              height="80"
+              style={iconStyle}
+            />
+            <p style={fileNameStyle}>Video from {getUrlDomain(videoUrl)}</p>
+             <p style={{ ...fileSizeStyle, fontSize: '0.8rem', wordBreak: 'break-all' }}>
+                {videoUrl}
+            </p>
+            
+            <div style={progressBarContainerStyle}>
+              <div style={progressBarStyle}>
+                <div style={{...progressFillStyle, width: `${uploadProgress}%`}}></div>
+              </div>
+              <p style={progressTextStyle}>
+                {uploadProgress < 50 ? 'Downloading video...' : 'Processing video...'} {uploadProgress}%
+              </p>
+            </div>
+          </div>
+        )}
+
         {status === 'processing' && (
           <div style={processingStyle}>
             <div style={spinnerStyle}></div>
@@ -208,7 +354,7 @@ function Detection() {
           </div>
         )}
 
-        {(status === 'formatError' || status === 'sizeError') && (
+        {(status === 'formatError' || status === 'sizeError' || status === 'urlError') && (
           <div style={errorContainerStyle}>
             <img
               src={process.env.PUBLIC_URL + "/warning.png"}
@@ -221,7 +367,9 @@ function Detection() {
             <p style={errorTextStyle}>
               {status === 'formatError' 
                 ? 'The file format should be .mp4, .mov, .avi. Please upload the correct format video.'
-                : 'The file exceeds the 200MB limit. Please upload a smaller file.'
+                : status === 'sizeError'
+                ? 'The file exceeds the 200MB limit. Please upload a smaller file.'
+                : 'Unable to process this video URL. Please check the link and try again.'
               }
             </p>
             <button style={tryAgainButtonStyle} onClick={handleTryAgain}>
@@ -232,7 +380,10 @@ function Detection() {
 
         {status === 'idle' && (
           <p style={supportedTextStyle}>
-            Supported Formats: .mp4, .mov, .avi | Max File Size: 200MB
+            {uploadMethod === 'file' 
+              ? 'Supported Formats: .mp4, .mov, .avi | Max File Size: 200MB'
+              : 'Supports any video URL from YouTube, TikTok, Instagram, Facebook, Twitter/X, and direct links'
+            }
           </p>
         )}
       </div>
@@ -299,7 +450,7 @@ const subtitleStyle = {
   opacity: '0.8',
 };
 
-// New styles for upload limit info
+// Upload limit info styles
 const uploadLimitInfoStyle = {
   backgroundColor: '#f8f9fa',
   padding: '15px',
@@ -320,6 +471,36 @@ const loginPromptStyle = {
   marginLeft: '10px',
   cursor: 'pointer',
   fontSize: '0.8rem'
+};
+
+// Upload method selector styles
+const methodSelectorStyle = {
+  display: 'flex',
+  gap: '1rem',
+  marginBottom: '2rem',
+  width: '100%',
+  maxWidth: '900px',
+  justifyContent: 'center'
+};
+
+const methodButtonStyle = {
+  backgroundColor: '#f8f9fa',
+  color: '#013D83',
+  border: '2px solid #013D83',
+  padding: '10px 20px',
+  borderRadius: '8px',
+  fontWeight: '600',
+  cursor: 'pointer',
+  fontSize: '1rem',
+  transition: 'all 0.3s ease',
+  flex: 1,
+  maxWidth: '200px'
+};
+
+const activeMethodButtonStyle = {
+  ...methodButtonStyle,
+  backgroundColor: '#013D83',
+  color: 'white'
 };
 
 const containerStyle = {
@@ -345,6 +526,49 @@ const dropZoneStyle = {
   width: '100%',
   transition: 'all 0.3s ease',
 };
+
+// URL upload styles
+const urlContainerStyle = {
+  border: '2px dashed #ccc',
+  borderRadius: '10px',
+  padding: '3rem 2rem',
+  textAlign: 'center',
+  width: '100%',
+  transition: 'all 0.3s ease',
+};
+
+const urlInputContainerStyle = {
+  display: 'flex',
+  gap: '1rem',
+  width: '100%',
+  maxWidth: '600px',
+  margin: '2rem auto',
+  alignItems: 'center'
+};
+
+const urlInputStyle = {
+  flex: 1,
+  padding: '12px 15px',
+  border: '1px solid #ddd',
+  borderRadius: '8px',
+  fontSize: '1rem',
+  backgroundColor: 'white',
+  minWidth: '300px'
+};
+
+const urlUploadButtonStyle = {
+  backgroundColor: '#013D83',
+  color: 'white',
+  border: 'none',
+  padding: '12px 25px',
+  borderRadius: '8px',
+  fontWeight: '700',
+  fontSize: '1rem',
+  cursor: 'pointer',
+  transition: 'all 0.3s ease',
+  whiteSpace: 'nowrap'
+};
+
 
 const iconStyle = {
   marginBottom: '1.5rem',
@@ -389,9 +613,11 @@ const fileNameStyle = {
 };
 
 const fileSizeStyle = {
-  color: '#E5E3E3',
+  color: '#747474',
   fontWeight: '600',
   marginBottom: '2rem',
+  fontSize: '0.9rem',
+  wordBreak: 'break-all'
 };
 
 const progressBarContainerStyle = {

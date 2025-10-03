@@ -3,12 +3,12 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { generatePDFReport, generateTextReport } from '../utils/pdfGenerator';
 import { FaComment, FaPaperPlane, FaTimes, FaStar } from 'react-icons/fa';
-import { useAuth } from '../contexts/AuthContext'; // Add this import
+import { useAuth } from '../contexts/AuthContext';
 
 function Results() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { currentUser, userProfile } = useAuth(); // Add auth context
+  const { currentUser, userProfile } = useAuth();
   const [analysisData, setAnalysisData] = useState(null);
   const [selectedFrame, setSelectedFrame] = useState(0);
   const [showHeatmap, setShowHeatmap] = useState(false);
@@ -21,17 +21,20 @@ function Results() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState(null);
   const [isAtBottom, setIsAtBottom] = useState(false);
+  const [videoError, setVideoError] = useState(false);
+  const [videoLoaded, setVideoLoaded] = useState(false);
   const resultsRef = useRef(null);
   const videoRef = useRef(null);
   const feedbackRef = useRef(null);
   const ctaContainerRef = useRef(null);
 
-  // Memoized cleanup function
+  // Memoized cleanup function - FIXED: use useCallback with empty dependency array
   const cleanupVideoUrl = useCallback(() => {
-    if (videoUrl && videoSource === 'file') {
+    if (videoUrl) {
+      console.log('Cleaning up video URL:', videoUrl);
       URL.revokeObjectURL(videoUrl);
     }
-  }, [videoUrl, videoSource]);
+  }, []); // Empty dependency array to prevent recreation
 
   // Handle scroll to detect when user reaches the CTA buttons section
   useEffect(() => {
@@ -162,7 +165,6 @@ function Results() {
         confidence: analysisData?.confidence || 0,
         source: videoSource,
         timestamp: new Date().toISOString(),
-        // Add user information
         user_name: userInfo.user_name,
         user_email: userInfo.user_email,
         user_id: userInfo.user_id,
@@ -192,24 +194,62 @@ function Results() {
     setRating(starRating);
   };
 
+  // Improved video error handler - FIXED: Remove setVideoError to prevent re-renders
+  const handleVideoError = (e) => {
+    console.error('Video playback error:', e);
+    setVideoError(true);
+  };
+
+  // Video loaded successfully
+  const handleVideoLoad = () => {
+    console.log('Video loaded successfully');
+    setVideoLoaded(true);
+    setVideoError(false);
+  };
+
+  // Improved video player render function
   const renderVideoPlayer = () => {
+    // File upload - use object URL
     if (videoSource === 'file' && videoUrl) {
       return (
-        <video
-          ref={videoRef}
-          controls
-          style={videoPlayerStyle}
-          src={videoUrl}
-          onError={(e) => {
-            console.error('Video playback error:', e);
-            e.target.style.display = 'none';
-            e.target.nextSibling.style.display = 'block';
-          }}
-        >
-          Your browser does not support the video tag.
-        </video>
+        <div style={videoWrapperStyle}>
+          <video
+            ref={videoRef}
+            controls
+            style={videoPlayerStyle}
+            src={videoUrl}
+            onError={handleVideoError}
+            onLoadedData={handleVideoLoad} // Use onLoadedData instead of onLoadStart
+            preload="metadata"
+            key={videoUrl} // Add key to force re-render when URL changes
+          >
+            Your browser does not support the video tag.
+          </video>
+          {videoError && (
+            <div style={videoErrorStyle}>
+              <p>Unable to play the uploaded video.</p>
+              <p style={videoErrorSubtext}>
+                The video file may be corrupted or in an unsupported format.
+              </p>
+              <button 
+                onClick={() => window.location.reload()} 
+                style={retryButtonStyle}
+              >
+                Retry
+              </button>
+            </div>
+          )}
+          {!videoError && !videoLoaded && (
+            <div style={videoLoadingStyle}>
+              <div style={spinnerStyle}></div>
+              <p>Loading video...</p>
+            </div>
+          )}
+        </div>
       );
-    } else if (videoSource === 'url' && analysisData?.original_url) {
+    } 
+    // URL upload - use downloaded video
+    else if (videoSource === 'url' && analysisData?.original_url) {
       const videoDownloadUrl = `http://localhost:8000/video/${analysisData.analysis_id}`;
       
       return (
@@ -232,21 +272,42 @@ function Results() {
             </div>
           </div>
           
-          <video
-            ref={videoRef}
-            controls
-            style={videoPlayerStyle}
-            onError={(e) => {
-              console.error('Video playback error:', e);
-              e.target.src = analysisData.original_url;
-            }}
-          >
-            <source src={videoDownloadUrl} type="video/mp4" />
-            Your browser does not support the video tag.
-          </video>
+          <div style={videoWrapperStyle}>
+            <video
+              ref={videoRef}
+              controls
+              style={videoPlayerStyle}
+              onError={handleVideoError}
+              onLoadedData={handleVideoLoad}
+              preload="metadata"
+            >
+              <source src={videoDownloadUrl} type="video/mp4" />
+              <source src={analysisData.original_url} type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+            {videoError && (
+              <div style={videoErrorStyle}>
+                <p>Unable to play the video directly.</p>
+                <p style={videoErrorSubtext}>
+                  You can view the original video at: {' '}
+                  <a href={analysisData.original_url} target="_blank" rel="noopener noreferrer" style={urlLinkStyle}>
+                    {analysisData.original_url}
+                  </a>
+                </p>
+              </div>
+            )}
+            {!videoError && !videoLoaded && (
+              <div style={videoLoadingStyle}>
+                <div style={spinnerStyle}></div>
+                <p>Loading video...</p>
+              </div>
+            )}
+          </div>
         </div>
       );
-    } else {
+    } 
+    // No video available
+    else {
       return (
         <div style={videoPlaceholderStyle}>
           <p>Video Player Placeholder</p>
@@ -303,7 +364,6 @@ function Results() {
         </div>
         
         <div style={feedbackContentStyle}>
-          {/* Show user status */}
           <div style={userStatusStyle}>
             <span style={{
               ...userStatusTextStyle,
@@ -358,37 +418,58 @@ function Results() {
     );
   };
 
+  // FIXED: Proper useEffect with cleanup
   useEffect(() => {
     if (location.state?.analysisData) {
       setAnalysisData(location.state.analysisData);
       
       if (location.state.uploadedFile) {
         const file = location.state.uploadedFile;
+        
         if (file instanceof File || (file.name && file.type)) {
+          // It's a file upload - create object URL
           try {
+            console.log('Creating object URL for uploaded file:', file.name, file.type, file.size);
+            
+            // Clean up previous URL first
+            cleanupVideoUrl();
+            
             const url = URL.createObjectURL(file);
             setVideoUrl(url);
             setVideoSource('file');
+            setVideoError(false);
+            setVideoLoaded(false);
+            console.log('Object URL created successfully');
           } catch (error) {
             console.error('Error creating object URL:', error);
             setVideoSource('none');
+            setVideoError(true);
           }
         } else {
+          // It's a URL upload - no local file to display
           setVideoSource('url');
+          setVideoError(false);
+          setVideoLoaded(false);
         }
       } else {
+        // No uploaded file (URL upload)
         setVideoSource('url');
+        setVideoError(false);
+        setVideoLoaded(false);
       }
       
       setLoading(false);
     } else {
       fetchMockData();
     }
+  }, [location]); // Remove cleanupVideoUrl from dependencies
 
+  // Separate cleanup effect
+  useEffect(() => {
     return () => {
       cleanupVideoUrl();
     };
-  }, [location, cleanupVideoUrl]);
+  }, [cleanupVideoUrl]);
 
   if (loading) {
     return (
@@ -433,7 +514,6 @@ function Results() {
         <FaComment size={20} />
       </button>
 
-      {/* Feedback Widget */}
       {renderFeedbackWidget()}
 
       <div style={headerStyle}>
@@ -792,6 +872,54 @@ const videoPlayerStyle = {
   height: '360px',
   borderRadius: '10px',
   backgroundColor: '#000',
+  display: 'block' 
+};
+
+const videoWrapperStyle = {
+  position: 'relative',
+  width: '100%',
+  maxWidth: '640px',
+  margin: '0 auto'
+};
+
+const videoErrorStyle = {
+  position: 'absolute',
+  top: '50%',
+  left: '50%',
+  transform: 'translate(-50%, -50%)',
+  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+  padding: '20px',
+  borderRadius: '10px',
+  textAlign: 'center',
+  border: '2px solid #ff4444',
+  zIndex: 10
+};
+
+const videoErrorSubtext = {
+  fontSize: '0.9rem',
+  color: '#666',
+  marginTop: '10px'
+};
+
+const videoLoadingStyle = {
+  position: 'absolute',
+  top: '50%',
+  left: '50%',
+  transform: 'translate(-50%, -50%)',
+  textAlign: 'center',
+  color: '#fff',
+  zIndex: 5
+};
+
+const retryButtonStyle = {
+  backgroundColor: '#013D83',
+  color: 'white',
+  border: 'none',
+  padding: '8px 16px',
+  borderRadius: '5px',
+  cursor: 'pointer',
+  marginTop: '10px',
+  fontSize: '0.9rem'
 };
 
 // New styles for URL video info

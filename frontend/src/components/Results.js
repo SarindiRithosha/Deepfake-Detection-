@@ -3,10 +3,12 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { generatePDFReport, generateTextReport } from '../utils/pdfGenerator';
 import { FaComment, FaPaperPlane, FaTimes, FaStar } from 'react-icons/fa';
+import { useAuth } from '../contexts/AuthContext'; // Add this import
 
 function Results() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { currentUser, userProfile } = useAuth(); // Add auth context
   const [analysisData, setAnalysisData] = useState(null);
   const [selectedFrame, setSelectedFrame] = useState(0);
   const [showHeatmap, setShowHeatmap] = useState(false);
@@ -120,6 +122,25 @@ function Results() {
     }
   };
 
+  // Get user information for feedback
+  const getUserInfo = () => {
+    if (currentUser && userProfile) {
+      return {
+        user_name: userProfile.name || 'Registered User',
+        user_email: currentUser.email || '',
+        user_id: currentUser.uid,
+        is_logged_in: true
+      };
+    } else {
+      return {
+        user_name: 'Anonymous User',
+        user_email: '',
+        user_id: null,
+        is_logged_in: false
+      };
+    }
+  };
+
   // Feedback functions
   const handleFeedbackSubmit = async () => {
     if (!feedback.trim() && rating === 0) {
@@ -131,6 +152,8 @@ function Results() {
     setSubmitStatus(null);
 
     try {
+      const userInfo = getUserInfo();
+      
       const feedbackData = {
         feedback: feedback.trim(),
         rating: rating,
@@ -138,7 +161,12 @@ function Results() {
         prediction: analysisData?.prediction || 'unknown',
         confidence: analysisData?.confidence || 0,
         source: videoSource,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        // Add user information
+        user_name: userInfo.user_name,
+        user_email: userInfo.user_email,
+        user_id: userInfo.user_id,
+        is_logged_in: userInfo.is_logged_in
       };
 
       const response = await axios.post('http://localhost:8000/submit-feedback', feedbackData);
@@ -259,6 +287,9 @@ function Results() {
   const renderFeedbackWidget = () => {
     if (!showFeedback) return null;
 
+    const userInfo = getUserInfo();
+    const isLoggedIn = userInfo.is_logged_in;
+
     return (
       <div ref={feedbackRef} style={feedbackWidgetStyle}>
         <div style={feedbackHeaderStyle}>
@@ -272,6 +303,16 @@ function Results() {
         </div>
         
         <div style={feedbackContentStyle}>
+          {/* Show user status */}
+          <div style={userStatusStyle}>
+            <span style={{
+              ...userStatusTextStyle,
+              color: isLoggedIn ? '#28a745' : '#6c757d'
+            }}>
+              {isLoggedIn ? `✓ Sending as ${userInfo.user_name}` : 'Sending as Anonymous User'}
+            </span>
+          </div>
+
           {renderStarRating()}
           
           <textarea
@@ -528,6 +569,20 @@ const pageStyle = {
   minHeight: '100vh',
   padding: '2rem 1rem',
   position: 'relative',
+};
+
+const userStatusStyle = {
+  marginBottom: '15px',
+  padding: '8px 12px',
+  backgroundColor: '#f8f9fa',
+  borderRadius: '6px',
+  border: '1px solid #e9ecef',
+  textAlign: 'center'
+};
+
+const userStatusTextStyle = {
+  fontSize: '0.85rem',
+  fontWeight: '500'
 };
 
 // Feedback Styles

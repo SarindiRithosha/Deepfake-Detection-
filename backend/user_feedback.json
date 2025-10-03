@@ -4,3 +4,5 @@
 {"timestamp": "2025-10-03T07:50:15.028Z", "rating": 4, "feedback": "hi", "analysis_id": "YOUTUBE_20251003_112807", "prediction": "FAKE", "confidence": 0.89, "source": "url"}
 {"timestamp": "2025-10-03T07:54:05.195Z", "rating": 4, "feedback": "jjjj", "analysis_id": "VID_20251003_132353", "prediction": "REAL", "confidence": 0.98, "source": "file"}
 {"timestamp": "2025-10-03T07:55:26.503Z", "rating": 4, "feedback": "hi", "analysis_id": "VID_20251003_132516", "prediction": "REAL", "confidence": 0.92, "source": "file"}
+{"timestamp": "2025-10-03T08:12:59.728Z", "rating": 5, "feedback": "", "analysis_id": "YOUTUBE_20251003_134155", "prediction": "REAL", "confidence": 0.93, "source": "url", "user_name": "Anonymous User", "user_email": "", "user_id": null, "is_logged_in": false}
+{"timestamp": "2025-10-03T08:16:38.863Z", "rating": 4, "feedback": "", "analysis_id": "YOUTUBE_20251003_134155", "prediction": "REAL", "confidence": 0.93, "source": "url", "user_name": "Sarindi Jayathilake", "user_email": "sarindijayathilake@gmail.com", "user_id": "iXnuj8CcgFPaRFLQT7I1Mw84O2l2", "is_logged_in": true}

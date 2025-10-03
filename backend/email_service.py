@@ -22,6 +22,10 @@ class FeedbackRequest(BaseModel):
     confidence: float = 0
     source: str = ""
     timestamp: str = ""
+    user_name: str = "Anonymous User"
+    user_email: str = ""
+    user_id: str = None
+    is_logged_in: bool = False
 
 class EmailService:
     def __init__(self):

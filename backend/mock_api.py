@@ -702,7 +702,11 @@ async def submit_feedback(feedback_request: FeedbackRequest):
             "analysis_id": feedback_request.analysis_id,
             "prediction": feedback_request.prediction,
             "confidence": feedback_request.confidence,
-            "source": feedback_request.source
+            "source": feedback_request.source,
+            "user_name": getattr(feedback_request, 'user_name', 'Anonymous User'),
+            "user_email": getattr(feedback_request, 'user_email', ''),
+            "user_id": getattr(feedback_request, 'user_id', None),
+            "is_logged_in": getattr(feedback_request, 'is_logged_in', False)
         }
         
         # Log feedback to JSON file
@@ -712,12 +716,13 @@ async def submit_feedback(feedback_request: FeedbackRequest):
         except Exception as e:
             print(f"Error logging feedback: {e}")
         
-        # Add notification for admin
+        # Add notification for admin with user information
         notification_data = {
             "type": "feedback",
-            "user_name": "Anonymous User",  
+            "user_name": getattr(feedback_request, 'user_name', 'Anonymous User'),
             "source": "Feedback Form",
-            "user_email": ""  
+            "user_email": getattr(feedback_request, 'user_email', ''),
+            "is_logged_in": getattr(feedback_request, 'is_logged_in', False)
         }
         notification_service.add_notification(notification_data)
         

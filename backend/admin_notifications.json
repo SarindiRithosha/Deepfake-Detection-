@@ -1,6 +1,24 @@
 {
   "notifications": [
     {
+      "id": 9,
+      "type": "feedback",
+      "user_name": "Sarindi Jayathilake",
+      "user_email": "sarindijayathilake@gmail.com",
+      "source": "Feedback Form",
+      "timestamp": "2025-10-22T08:58:21.826841",
+      "read": true
+    },
+    {
+      "id": 8,
+      "type": "contact",
+      "user_name": "Sarindi Jayathilake",
+      "user_email": "sarindijayathilake@gmail.com",
+      "source": "Contact Form",
+      "timestamp": "2025-10-22T08:57:12.170162",
+      "read": true
+    },
+    {
       "id": 7,
       "type": "feedback",
       "user_name": "Sarindi Jayathilake",
@@ -64,5 +82,5 @@
       "read": true
     }
   ],
-  "last_id": 7
+  "last_id": 9
 }

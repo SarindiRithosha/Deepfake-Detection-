@@ -100,7 +100,8 @@ function About() {
             <h3 style={devName}>Sarindi Rithosha</h3>
             <p style={devRole}>Final Year Student · Software Engineering · Plymouth University</p>
             <p style={{ ...bodyText, textAlign:'justify', maxWidth:'680px' }}>
-              Verity-X was developed as a Final Year Individual Project (PUSL3190) at Plymouth University. The project combines full-stack web development, machine learning, and computer vision to
+              Verity-X was developed as a Final Year Individual Project (PUSL3190) at Plymouth University. 
+              The project combines full-stack web development, machine learning, and computer vision to
               deliver a practical, scalable deepfake detection solution. It demonstrates proficiency in
               agile development, FastAPI backend engineering, React frontend architecture, Firebase
               integration, and deep learning model training on cloud infrastructure.

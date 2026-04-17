@@ -143,8 +143,10 @@ function Detection() {
       console.error('URL upload error:', error);
       if (error.response?.status === 400) {
         setStatus('urlError');
+      } else if (error.response?.status === 503) {
+        setStatus('analysisError');
       } else {
-        setStatus('urlError');
+        setStatus('analysisError');
       }
     }
   };

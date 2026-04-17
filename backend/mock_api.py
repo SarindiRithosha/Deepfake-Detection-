@@ -199,15 +199,34 @@ def download_video_from_url(video_url: str, analysis_id: str) -> str:
         return repair_video_file(temp_file_path)
 
     ydl_opts = {
-        "outtmpl":  temp_file_path,
-        "format":   "best[height<=720]/best[height<=480]/best",
-        "quiet":    True,
-        "no_warnings": True,
-        "http_headers": {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        },
-        "retries":  3,
-    }
+    "outtmpl":     temp_file_path,
+    "format":      "best[height<=720][ext=mp4]/best[height<=480][ext=mp4]/best[ext=mp4]/best",
+    "quiet":       True,
+    "no_warnings": True,
+    "retries":     5,
+    # Impersonate a real browser to avoid 403
+    "http_headers": {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/120.0.0.0 Safari/537.36"
+        ),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-us,en;q=0.5",
+        "Sec-Fetch-Mode": "navigate",
+    },
+    "extractor_args": {
+        "youtube": {
+            "player_client": ["android", "web"],
+        }
+    },
+    # Merge into single mp4
+    "merge_output_format": "mp4",
+    "postprocessors": [{
+        "key": "FFmpegVideoConvertor",
+        "preferedformat": "mp4",
+    }],
+}
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.extract_info(video_url, download=True)
 

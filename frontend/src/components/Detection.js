@@ -4,218 +4,126 @@ import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 
 function Detection() {
-  const [file, setFile] = useState(null);
-  const [videoUrl, setVideoUrl] = useState('');
+  const [file,           setFile]           = useState(null);
+  const [videoUrl,       setVideoUrl]       = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [status, setStatus] = useState('idle');
+  const [status,         setStatus]         = useState('idle');
   const [showLimitModal, setShowLimitModal] = useState(false);
-  const [uploadMethod, setUploadMethod] = useState('file'); // 'file' or 'url'
+  const [uploadMethod,   setUploadMethod]   = useState('file');
   const fileInputRef = useRef(null);
-  const navigate = useNavigate();
-  const { currentUser, uploadCount, incrementUploadCount, canUpload, getUploadLimit } = useAuth();
+  const navigate     = useNavigate();
+  const { currentUser, uploadCount, incrementUploadCount, canUpload } = useAuth();
 
-  const maxUploads = getUploadLimit();
-  const remaining = maxUploads - uploadCount;
+  // ── Get Firebase auth token ──────────────────────────────────────────────
+  // FIX: sends Bearer token so backend receives real uid instead of "guest"
+  const getAuthHeader = async () => {
+    if (!currentUser) return {};
+    try {
+      const token = await currentUser.getIdToken();
+      return { Authorization: `Bearer ${token}` };
+    } catch (e) {
+      console.error('Failed to get auth token:', e);
+      return {};
+    }
+  };
 
+  // ── File upload ──────────────────────────────────────────────────────────
   const handleFileChange = async (selectedFile) => {
-    // Check upload limit before proceeding
-    if (!canUpload()) {
-      setShowLimitModal(true);
-      return;
-    }
+    if (!canUpload()) { setShowLimitModal(true); return; }
 
-    // Validate file type
     const allowedFormats = ['.mp4', '.mov', '.avi'];
-    const fileExtension = selectedFile.name.substring(selectedFile.name.lastIndexOf('.')).toLowerCase();
-    
-    if (!allowedFormats.includes(fileExtension)) {
-      setStatus('formatError');
-      return;
-    }
+    const ext = selectedFile.name.substring(selectedFile.name.lastIndexOf('.')).toLowerCase();
+    if (!allowedFormats.includes(ext)) { setStatus('formatError'); return; }
 
-    // Validate file size (200MB)
     const maxSize = 200 * 1024 * 1024;
-    if (selectedFile.size > maxSize) {
-      setStatus('sizeError');
-      return;
-    }
+    if (selectedFile.size > maxSize) { setStatus('sizeError'); return; }
 
     setFile(selectedFile);
     setStatus('uploading');
 
     try {
-      const formData = new FormData();
+      const authHeaders = await getAuthHeader();
+      const formData    = new FormData();
       formData.append('file', selectedFile);
 
       const response = await axios.post('http://localhost:8000/analyze', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round(
-            (progressEvent.loaded * 100) / progressEvent.total
-          );
-          setUploadProgress(percentCompleted);
-        },
+        headers: { 'Content-Type': 'multipart/form-data', ...authHeaders },
+        onUploadProgress: (e) => setUploadProgress(Math.round((e.loaded * 100) / e.total)),
         timeout: 300000,
       });
 
-      // Increment upload count on successful upload
       await incrementUploadCount();
-      
       setStatus('processing');
-      
-      setTimeout(() => {
-        navigate('/results', { 
-          state: { 
-            analysisData: response.data,
-            uploadedFile: selectedFile 
-          } 
-        });
-      }, 3000);
-
+      setTimeout(() => navigate('/results', {
+        state: { analysisData: response.data, uploadedFile: selectedFile }
+      }), 2500);
     } catch (error) {
       console.error('Upload error:', error);
       if (error.response?.status === 400) {
-        if (error.response.data.detail.includes('format')) {
-          setStatus('formatError');
-        } else if (error.response.data.detail.includes('size')) {
-          setStatus('sizeError');
-        }
+        const detail = error.response.data?.detail || '';
+        setStatus(detail.includes('format') ? 'formatError' : detail.includes('size') ? 'sizeError' : 'analysisError');
       } else {
-        setStatus('sizeError');
+        setStatus('analysisError');
       }
     }
   };
 
+  // ── URL upload ───────────────────────────────────────────────────────────
   const handleUrlUpload = async () => {
-    // Check upload limit before proceeding
-    if (!canUpload()) {
-      setShowLimitModal(true);
-      return;
-    }
-
-    // Validate URL
-    if (!videoUrl.trim()) {
-      setStatus('urlError');
-      return;
-    }
-
-    // Basic URL validation
-    try {
-      new URL(videoUrl);
-    } catch (error) {
-      setStatus('urlError');
-      return;
-    }
+    if (!canUpload()) { setShowLimitModal(true); return; }
+    if (!videoUrl.trim()) { setStatus('urlError'); return; }
+    try { new URL(videoUrl); } catch { setStatus('urlError'); return; }
 
     setStatus('uploading');
 
     try {
-      const response = await axios.post('http://localhost:8000/analyze-url', {
-        video_url: videoUrl
-      }, {
-        timeout: 300000,
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round(
-            (progressEvent.loaded * 100) / (progressEvent.total || 100)
-          );
-          setUploadProgress(percentCompleted);
-        },
-      });
+      const authHeaders = await getAuthHeader();
 
-      // Increment upload count on successful upload
+      const response = await axios.post(
+        'http://localhost:8000/analyze-url',
+        { video_url: videoUrl },
+        {
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
+          timeout: 300000,
+          onUploadProgress: (e) => setUploadProgress(Math.round((e.loaded * 100) / (e.total || 100))),
+        }
+      );
+
       await incrementUploadCount();
-      
       setStatus('processing');
-      
-      setTimeout(() => {
-        navigate('/results', { 
-          state: { 
-            analysisData: response.data,
-            uploadedFile: null, 
-            videoUrl: videoUrl 
-          } 
-        });
-      }, 3000);
-
+      setTimeout(() => navigate('/results', {
+        state: { analysisData: response.data, uploadedFile: null, videoUrl }
+      }), 2500);
     } catch (error) {
       console.error('URL upload error:', error);
-      if (error.response?.status === 400) {
-        setStatus('urlError');
-      } else if (error.response?.status === 503) {
-        setStatus('analysisError');
-      } else {
-        setStatus('analysisError');
-      }
+      setStatus(error.response?.status === 400 ? 'urlError' : 'analysisError');
     }
   };
 
-  const handleDrop = (e) => {
-    e.preventDefault();
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFileChange(e.dataTransfer.files[0]);
-    }
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-  };
-
-  const handleFileInputClick = () => {
-    fileInputRef.current.click();
-  };
-
-  const handleTryAgain = () => {
-    setFile(null);
-    setVideoUrl('');
-    setUploadProgress(0);
-    setStatus('idle');
-  };
-
+  const handleDrop     = (e) => { e.preventDefault(); if (e.dataTransfer.files?.[0]) handleFileChange(e.dataTransfer.files[0]); };
+  const handleDragOver = (e) => e.preventDefault();
+  const handleTryAgain = () => { setFile(null); setVideoUrl(''); setUploadProgress(0); setStatus('idle'); };
   const formatFileSize = (bytes) => {
     if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const k = 1024, sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
-
-  // Extract domain from URL for display
-  const getUrlDomain = (url) => {
-    try {
-      const domain = new URL(url).hostname.replace('www.', '');
-      return domain;
-    } catch {
-      return 'unknown';
-    }
-  };
+  const getUrlDomain = (url) => { try { return new URL(url).hostname.replace('www.', ''); } catch { return 'unknown'; } };
 
   return (
     <div style={pageStyle}>
+      {/* Header */}
       <div style={headerStyle}>
         <h1 style={titleStyle}>Upload Your Video for Analysis</h1>
         <p style={subtitleStyle}>Upload your video file or provide a URL and let our AI detect deepfake content</p>
-      </div>
-
-      {/* Upload Limit Info */}
-      <div style={uploadLimitInfoStyle}>
-        <strong>Upload Status:</strong> {uploadCount}/{maxUploads} videos analyzed
-        <br />
-        <strong>Remaining:</strong> {remaining} upload{remaining !== 1 ? 's' : ''}
-        
         {!currentUser && (
-          <div style={{ marginTop: '10px' }}>
-            <small>
-              Unregistered users are limited to 3 uploads. 
-              <button 
-                onClick={() => navigate('/login')}
-                style={loginPromptStyle}
-              >
-                Login to Analyze More Files
-              </button>
-            </small>
-          </div>
+          <p style={guestNoteStyle}>
+            Guest users are limited to 3 analyses.{' '}
+            <button onClick={() => navigate('/login')} style={loginPromptStyle}>
+              Login for unlimited access
+            </button>
+          </p>
         )}
       </div>
 
@@ -244,16 +152,17 @@ function Detection() {
           onChange={(e) => e.target.files[0] && handleFileChange(e.target.files[0])}
         />
 
+        {/* IDLE — file drop zone */}
         {status === 'idle' && uploadMethod === 'file' && (
           <div
             style={dropZoneStyle}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
-            onClick={handleFileInputClick}
+            onClick={() => fileInputRef.current.click()}
           >
             <img
-              src={process.env.PUBLIC_URL + "/video-camera.png"}
-              alt="Camera"
+              src={process.env.PUBLIC_URL + '/video-camera.png'}
+              alt="Upload video"
               width="80"
               height="80"
               style={iconStyle}
@@ -266,17 +175,17 @@ function Detection() {
           </div>
         )}
 
+        {/* IDLE — URL input */}
         {status === 'idle' && uploadMethod === 'url' && (
           <div style={urlContainerStyle}>
             <img
-              src={process.env.PUBLIC_URL + "/link.png"}
-              alt="Link"
+              src={process.env.PUBLIC_URL + '/link.png'}
+              alt="Insert URL"
               width="80"
               height="80"
               style={iconStyle}
             />
             <p style={dragTextStyle}>Insert Video URL</p>
-            
             <div style={urlInputContainerStyle}>
               <input
                 type="url"
@@ -285,7 +194,7 @@ function Detection() {
                 onChange={(e) => setVideoUrl(e.target.value)}
                 style={urlInputStyle}
               />
-              <button 
+              <button
                 style={urlUploadButtonStyle}
                 onClick={handleUrlUpload}
                 disabled={!videoUrl.trim()}
@@ -293,14 +202,14 @@ function Detection() {
                 Analyze URL
               </button>
             </div>
-            
           </div>
         )}
 
+        {/* UPLOADING — file */}
         {status === 'uploading' && file && uploadMethod === 'file' && (
           <div style={uploadingStyle}>
             <img
-              src={process.env.PUBLIC_URL + "/video-file.png"}
+              src={process.env.PUBLIC_URL + '/video-file.png'}
               alt="Video File"
               width="80"
               height="80"
@@ -308,33 +217,32 @@ function Detection() {
             />
             <p style={fileNameStyle}>{file.name}</p>
             <p style={fileSizeStyle}>{formatFileSize(file.size)}</p>
-            
             <div style={progressBarContainerStyle}>
               <div style={progressBarStyle}>
-                <div style={{...progressFillStyle, width: `${uploadProgress}%`}}></div>
+                <div style={{ ...progressFillStyle, width: `${uploadProgress}%` }} />
               </div>
               <p style={progressTextStyle}>Uploading: {uploadProgress}%</p>
             </div>
           </div>
         )}
 
+        {/* UPLOADING — URL */}
         {status === 'uploading' && uploadMethod === 'url' && (
           <div style={uploadingStyle}>
             <img
-              src={process.env.PUBLIC_URL + "/link.png"}
+              src={process.env.PUBLIC_URL + '/link.png'}
               alt="Video URL"
               width="80"
               height="80"
               style={iconStyle}
             />
             <p style={fileNameStyle}>Video from {getUrlDomain(videoUrl)}</p>
-             <p style={{ ...fileSizeStyle, fontSize: '0.8rem', wordBreak: 'break-all' }}>
-                {videoUrl}
+            <p style={{ ...fileSizeStyle, fontSize: '0.8rem', wordBreak: 'break-all' }}>
+              {videoUrl}
             </p>
-            
             <div style={progressBarContainerStyle}>
               <div style={progressBarStyle}>
-                <div style={{...progressFillStyle, width: `${uploadProgress}%`}}></div>
+                <div style={{ ...progressFillStyle, width: `${uploadProgress}%` }} />
               </div>
               <p style={progressTextStyle}>
                 {uploadProgress < 50 ? 'Downloading video...' : 'Processing video...'} {uploadProgress}%
@@ -343,9 +251,10 @@ function Detection() {
           </div>
         )}
 
+        {/* PROCESSING */}
         {status === 'processing' && (
           <div style={processingStyle}>
-            <div style={spinnerStyle}></div>
+            <div style={spinnerStyle} />
             <p style={processingTitleStyle}>Processing Your Video...</p>
             <p style={processingTextStyle}>
               Our AI is analyzing your video for deepfake detection. This may take a few minutes.
@@ -356,10 +265,11 @@ function Detection() {
           </div>
         )}
 
-        {(status === 'formatError' || status === 'sizeError' || status === 'urlError') && (
+        {/* ERRORS */}
+        {['formatError', 'sizeError', 'urlError', 'analysisError'].includes(status) && (
           <div style={errorContainerStyle}>
             <img
-              src={process.env.PUBLIC_URL + "/warning.png"}
+              src={process.env.PUBLIC_URL + '/warning.png'}
               alt="Warning"
               width="80"
               height="80"
@@ -367,12 +277,13 @@ function Detection() {
             />
             <p style={errorTitleStyle}>Upload Error</p>
             <p style={errorTextStyle}>
-              {status === 'formatError' 
+              {status === 'formatError'
                 ? 'The file format should be .mp4, .mov, .avi. Please upload the correct format video.'
                 : status === 'sizeError'
                 ? 'The file exceeds the 200MB limit. Please upload a smaller file.'
-                : 'Unable to process this video URL. Please check the link and try again.'
-              }
+                : status === 'urlError'
+                ? 'Unable to process this video URL. Please check the link and try again.'
+                : 'The analysis failed. Please try again with a different video.'}
             </p>
             <button style={tryAgainButtonStyle} onClick={handleTryAgain}>
               Try Again
@@ -382,47 +293,41 @@ function Detection() {
 
         {status === 'idle' && (
           <p style={supportedTextStyle}>
-            {uploadMethod === 'file' 
+            {uploadMethod === 'file'
               ? 'Supported Formats: .mp4, .mov, .avi | Max File Size: 200MB'
-              : 'Supports any video URL from YouTube, TikTok, Instagram, Facebook, Twitter/X, and direct links'
-            }
+              : 'Supports video URLs from YouTube, TikTok, Instagram, Facebook, Twitter/X, and direct links'}
           </p>
         )}
       </div>
 
-      {/* Upload Limit Modal */}
+      {/* Guest limit modal */}
       {showLimitModal && (
         <div style={modalOverlayStyle}>
           <div style={modalStyle}>
             <h3>Upload Limit Reached</h3>
-            <p>You have reached the maximum of {maxUploads} uploads.</p>
-            {!currentUser ? (
-              <>
-                <p>Please login or register to continue using Verity-X.</p>
-                <button 
-                  onClick={() => navigate('/login')}
-                  style={modalButtonStyle}
-                >
-                  Login Now
-                </button>
-              </>
-            ) : (
-              <p>Please contact support if you need more uploads.</p>
-            )}
-            <button 
-              onClick={() => setShowLimitModal(false)}
-              style={cancelButtonStyle}
-            >
+            <p>You have reached the maximum of 3 guest analyses.</p>
+            <p>Please login or register to continue using Verity-X with unlimited analyses.</p>
+            <button onClick={() => navigate('/login')} style={modalButtonStyle}>
+              Login Now
+            </button>
+            <button onClick={() => setShowLimitModal(false)} style={cancelButtonStyle}>
               Cancel
             </button>
           </div>
         </div>
       )}
+
+      <style>{`
+        @keyframes spin {
+          0%   { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }
 
-// ===== STYLES =====
+// ── Styles ────────────────────────────────────────────────────────────────────
 
 const pageStyle = {
   padding: '2rem 1rem',
@@ -452,16 +357,10 @@ const subtitleStyle = {
   opacity: '0.8',
 };
 
-// Upload limit info styles
-const uploadLimitInfoStyle = {
-  backgroundColor: '#f8f9fa',
-  padding: '15px',
-  borderRadius: '8px',
-  margin: '0 0 20px 0',
-  borderLeft: '4px solid #013D83',
-  width: '100%',
-  maxWidth: '900px',
-  textAlign: 'center'
+const guestNoteStyle = {
+  color: '#6b7280',
+  fontSize: '0.85rem',
+  marginTop: '0.5rem',
 };
 
 const loginPromptStyle = {
@@ -470,19 +369,18 @@ const loginPromptStyle = {
   border: 'none',
   padding: '5px 10px',
   borderRadius: '3px',
-  marginLeft: '10px',
+  marginLeft: '8px',
   cursor: 'pointer',
-  fontSize: '0.8rem'
+  fontSize: '0.8rem',
 };
 
-// Upload method selector styles
 const methodSelectorStyle = {
   display: 'flex',
   gap: '1rem',
   marginBottom: '2rem',
   width: '100%',
   maxWidth: '900px',
-  justifyContent: 'center'
+  justifyContent: 'center',
 };
 
 const methodButtonStyle = {
@@ -496,13 +394,13 @@ const methodButtonStyle = {
   fontSize: '1rem',
   transition: 'all 0.3s ease',
   flex: 1,
-  maxWidth: '200px'
+  maxWidth: '200px',
 };
 
 const activeMethodButtonStyle = {
   ...methodButtonStyle,
   backgroundColor: '#013D83',
-  color: 'white'
+  color: 'white',
 };
 
 const containerStyle = {
@@ -529,7 +427,6 @@ const dropZoneStyle = {
   transition: 'all 0.3s ease',
 };
 
-// URL upload styles
 const urlContainerStyle = {
   border: '2px dashed #ccc',
   borderRadius: '10px',
@@ -545,7 +442,7 @@ const urlInputContainerStyle = {
   width: '100%',
   maxWidth: '600px',
   margin: '2rem auto',
-  alignItems: 'center'
+  alignItems: 'center',
 };
 
 const urlInputStyle = {
@@ -555,7 +452,7 @@ const urlInputStyle = {
   borderRadius: '8px',
   fontSize: '1rem',
   backgroundColor: 'white',
-  minWidth: '300px'
+  minWidth: '300px',
 };
 
 const urlUploadButtonStyle = {
@@ -568,9 +465,8 @@ const urlUploadButtonStyle = {
   fontSize: '1rem',
   cursor: 'pointer',
   transition: 'all 0.3s ease',
-  whiteSpace: 'nowrap'
+  whiteSpace: 'nowrap',
 };
-
 
 const iconStyle = {
   marginBottom: '1.5rem',
@@ -619,7 +515,7 @@ const fileSizeStyle = {
   fontWeight: '600',
   marginBottom: '2rem',
   fontSize: '0.9rem',
-  wordBreak: 'break-all'
+  wordBreak: 'break-all',
 };
 
 const progressBarContainerStyle = {
@@ -727,18 +623,14 @@ const supportedTextStyle = {
   fontSize: '0.9rem',
 };
 
-// Modal styles
 const modalOverlayStyle = {
   position: 'fixed',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
+  top: 0, left: 0, right: 0, bottom: 0,
   backgroundColor: 'rgba(0,0,0,0.5)',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  zIndex: 1000
+  zIndex: 1000,
 };
 
 const modalStyle = {
@@ -747,7 +639,7 @@ const modalStyle = {
   borderRadius: '10px',
   maxWidth: '400px',
   width: '90%',
-  textAlign: 'center'
+  textAlign: 'center',
 };
 
 const modalButtonStyle = {
@@ -757,7 +649,7 @@ const modalButtonStyle = {
   padding: '10px 20px',
   borderRadius: '5px',
   margin: '5px',
-  cursor: 'pointer'
+  cursor: 'pointer',
 };
 
 const cancelButtonStyle = {
@@ -767,18 +659,7 @@ const cancelButtonStyle = {
   padding: '10px 20px',
   borderRadius: '5px',
   margin: '5px',
-  cursor: 'pointer'
+  cursor: 'pointer',
 };
-
-const styles = `
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-`;
-
-const styleSheet = document.createElement('style');
-styleSheet.innerText = styles;
-document.head.appendChild(styleSheet);
 
 export default Detection;

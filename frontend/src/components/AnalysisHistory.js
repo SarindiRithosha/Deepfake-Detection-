@@ -200,7 +200,7 @@ function AnalysisHistory() {
                         </td>
                         <td style={td}>
                           <span style={sourceChip}>
-                            {analysis.source==='file'?'📁 File':`🔗 ${analysis.source||'URL'}`}
+                            {analysis.source==='file'?'File':(analysis.source||'URL')}
                           </span>
                         </td>
                         <td style={td}>

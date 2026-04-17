@@ -1,7 +1,6 @@
 """
 firebase_service.py
 Verity-X — Firestore operations for Video, Analysis, and Feedback collections.
-Follows the ERD schema exactly.
 """
 
 import uuid
@@ -14,7 +13,6 @@ logger = logging.getLogger("verity_firebase")
 
 
 def _db():
-    """Get Firestore client."""
     return firestore.client()
 
 
@@ -23,14 +21,10 @@ def create_video_record(
     user_id: Optional[str],
     original_filename: str,
     file_size: int,
-    source: str,            # 'file' | 'youtube' | 'tiktok' | etc.
+    source: str,
     source_url: str = "",
-    video_info: dict = None # {frame_count, fps, duration, width, height}
+    video_info: dict = None
 ) -> str:
-    """
-    Create a Video document in Firestore.
-    Returns the generated videoId.
-    """
     video_id = str(uuid.uuid4())
     vi = video_info or {}
 
@@ -38,10 +32,9 @@ def create_video_record(
         "videoId":          video_id,
         "userId":           user_id or "guest",
         "originalFilename": original_filename,
-        "storagePath":      "",        # Cloud Storage path — populated on Cloud Run
+        "storagePath":      "",
         "publicUrl":        "",
-        "format":           original_filename.rsplit(".", 1)[-1].lower()
-                            if "." in original_filename else "mp4",
+        "format":           original_filename.rsplit(".", 1)[-1].lower() if "." in original_filename else "mp4",
         "fileSize":         file_size,
         "duration":         vi.get("duration", 0),
         "frameCount":       vi.get("frame_count", 0),
@@ -56,7 +49,7 @@ def create_video_record(
 
     try:
         _db().collection("videos").document(video_id).set(doc)
-        logger.info(f"Video record created: {video_id}")
+        logger.info(f"Video record created: {video_id} for user: {user_id or 'guest'}")
     except Exception as e:
         logger.error(f"Failed to create video record: {e}")
 
@@ -64,55 +57,50 @@ def create_video_record(
 
 
 def mark_video_processed(video_id: str):
-    """Mark a video as processed after analysis completes."""
     try:
-        _db().collection("videos").document(video_id).update({
-            "processed": True
-        })
+        _db().collection("videos").document(video_id).update({"processed": True})
     except Exception as e:
         logger.warning(f"Could not mark video processed: {e}")
 
 
 # ── Analysis collection ───────────────────────────────────────────────────────
 def create_analysis_record(
-    user_id:        Optional[str],
-    video_id:       str,
-    video_name:     str,
-    verdict:        str,            # 'REAL' | 'FAKE'
-    confidence:     float,
-    frame_scores:   dict,           # {frame_number: score}
-    anomalies:      list,
-    source:         str,
-    source_url:     str = "",
+    user_id:           Optional[str],
+    video_id:          str,
+    video_name:        str,
+    verdict:           str,
+    confidence:        float,
+    frame_scores:      dict,
+    anomalies:         list,
+    source:            str,
+    source_url:        str = "",
     gradcam_generated: bool = False,
 ) -> str:
-    """
-    Create an Analysis document in Firestore.
-    Returns the generated analysisId.
-    """
     analysis_id = str(uuid.uuid4())
 
     doc = {
-        "analysisId":      analysis_id,
-        "userId":          user_id or "guest",
-        "videoId":         video_id,
-        "videoName":       video_name,
-        "verdict":         verdict,
-        "confidenceScore": round(confidence, 4),
-        "frameScores":     frame_scores,
-        "anomalies":       anomalies,
-        "heatmapUrl":      "",   # Populated if stored to Cloud Storage later
-        "uploadedAt":      firestore.SERVER_TIMESTAMP,
-        "analyzedAt":      firestore.SERVER_TIMESTAMP,
-        "status":          "completed",
-        "source":          source,
-        "sourceUrl":       source_url,
+        "analysisId":       analysis_id,
+        "userId":           user_id or "guest",
+        "videoId":          video_id,
+        "videoName":        video_name,
+        "verdict":          verdict,
+        "confidenceScore":  round(confidence, 4),
+        "frameScores":      frame_scores,
+        "anomalies":        anomalies,
+        "heatmapUrl":       "",
+        "uploadedAt":       firestore.SERVER_TIMESTAMP,
+        "analyzedAt":       firestore.SERVER_TIMESTAMP,
+        # Also store as plain ISO string for easy sorting without index
+        "analyzedAtStr":    datetime.now().isoformat(),
+        "status":           "completed",
+        "source":           source,
+        "sourceUrl":        source_url,
         "gradcamGenerated": gradcam_generated,
     }
 
     try:
         _db().collection("analyses").document(analysis_id).set(doc)
-        logger.info(f"Analysis record created: {analysis_id} | {verdict} | {confidence:.2%}")
+        logger.info(f"Analysis record created: {analysis_id} | user: {user_id or 'guest'} | {verdict} | {confidence:.2%}")
     except Exception as e:
         logger.error(f"Failed to create analysis record: {e}")
 
@@ -121,37 +109,45 @@ def create_analysis_record(
 
 def get_analysis_history(user_id: str, limit: int = 20) -> list:
     """
-    Fetch recent analyses for a user.
-    Returns list of dicts (serializable — no Firestore timestamps).
+    Fetch analyses for a user.
+    Uses simple where() filter WITHOUT order_by to avoid needing a Firestore composite index.
+    Sorts in Python instead.
     """
     try:
         docs = (
             _db().collection("analyses")
             .where("userId", "==", user_id)
-            .order_by("analyzedAt", direction=firestore.Query.DESCENDING)
-            .limit(limit)
+            .limit(50)   # fetch more then sort+slice in Python
             .stream()
         )
+
         results = []
         for doc in docs:
             data = doc.to_dict()
-            # Convert timestamps to ISO strings for JSON serialisation
+            # Convert Firestore timestamps to ISO strings for JSON serialisation
             for key in ("uploadedAt", "analyzedAt"):
                 if key in data and hasattr(data[key], "isoformat"):
                     data[key] = data[key].isoformat()
+                elif key in data and hasattr(data[key], "timestamp"):
+                    # Firestore DatetimeWithNanoseconds
+                    try:
+                        data[key] = data[key].isoformat()
+                    except Exception:
+                        data[key] = str(data[key])
             results.append(data)
-        return results
+
+        # Sort by analyzedAtStr (ISO string sorts correctly) descending
+        results.sort(key=lambda x: x.get("analyzedAtStr", ""), reverse=True)
+
+        return results[:limit]
+
     except Exception as e:
-        logger.error(f"Failed to fetch analysis history: {e}")
+        logger.error(f"Failed to fetch analysis history for {user_id}: {e}")
         return []
 
 
 # ── User upload counter ───────────────────────────────────────────────────────
 def increment_user_analysis_count(user_id: str):
-    """
-    Increment analysisCount and update lastAnalysis + lastUpload timestamps
-    on the user document.
-    """
     if not user_id or user_id == "guest":
         return
     try:
@@ -164,6 +160,7 @@ def increment_user_analysis_count(user_id: str):
                 "last_analysis":  firestore.SERVER_TIMESTAMP,
                 "last_upload":    firestore.SERVER_TIMESTAMP,
             })
+            logger.info(f"Incremented analysis count for {user_id}: {current + 1}")
     except Exception as e:
         logger.warning(f"Could not increment analysis count: {e}")
 
@@ -180,10 +177,6 @@ def create_feedback_record(
     confidence:  float,
     source:      str,
 ) -> str:
-    """
-    Create a Feedback document in Firestore.
-    Returns the generated feedbackId.
-    """
     feedback_id = str(uuid.uuid4())
 
     doc = {

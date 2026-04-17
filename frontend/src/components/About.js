@@ -2,397 +2,174 @@ import React from 'react';
 
 function About() {
   return (
-    <div style={pageStyle}>
-      
-      {/* ===== TITLE SECTION ===== */}
-      <section style={titleSectionStyle}>
-        <div style={containerStyle}>
-          <h1 style={titleStyle}>About Verity-X</h1>
-          <p style={subtitleStyle}>
-            Building trust in the digital age through advanced deepfake detection
-          </p>
-        </div>
+    <div style={page}>
+
+      {/* Title */}
+      <section style={titleSection}>
+        <h1 style={titleStyle}>About Verity-X</h1>
+        <p style={subtitleStyle}>Building trust in the digital age through advanced deepfake detection</p>
       </section>
 
-      {/* ===== MISSION SECTION ===== */}
-      <section style={missionSectionStyle}>
-        <div style={containerStyle}>
-          <h2 style={sectionTitleStyle}>Our Mission</h2>
-          <div style={dividerStyle}></div>
-          <div style={missionBoxStyle}>
-            <p style={missionTextStyle}>
-              In an era where digital manipulation has become increasingly sophisticated, the threat
-              of deepfakes poses a significant challenge to information integrity and public trust.
-              Verity-X was created to combat this growing menace by providing reliable, accurate 
-              detection of manipulated media content.<br /><br />
-              Our mission is to restore confidence in digital media by empowering users with cutting-
-              edge AI technology that can distinguish between authentic and artificially generated 
-              content. We believe that truth and transparency are fundamental to a healthy digital ecosystem.
+      {/* Mission */}
+      <section style={section}>
+        <div style={inner}>
+          <h2 style={sectionHead}>Our Mission</h2>
+          <div style={divider}/>
+          <div style={missionBox}>
+            <p style={bodyText}>
+              In an era where digital manipulation has become increasingly sophisticated, deepfake
+              technology poses a significant challenge to information integrity and public trust. Verity-X
+              was created to combat this growing threat by providing reliable, accurate detection of
+              synthetically manipulated video content.
+            </p>
+            <p style={{ ...bodyText, marginTop:'1rem' }}>
+              Our mission is to restore confidence in digital media by empowering users with cutting-edge
+              AI technology that can distinguish between authentic and artificially generated content. We
+              believe that truth and transparency are fundamental to a healthy digital ecosystem.
             </p>
           </div>
         </div>
       </section>
 
-      {/* ===== TECHNOLOGY SECTION ===== */}
-      <section style={techSectionStyle}>
-        <div style={containerStyle}>
-          <h2 style={sectionTitleStyle}>The Technology Behind Verity-X</h2>
-          <div style={dividerStyle}></div>
-          <div style={techBoxesContainer}>
-            {/* Model Box */}
-            <div style={techBoxStyle}>
-              <div style={techHeaderStyle}>
-                <img
-                  src={process.env.PUBLIC_URL + "/model.png"}
-                  alt="AI Model"
-                  width="60"
-                  height="60"
-                  style={techIconStyle}
-                />
-                <h4 style={techSubtitleStyle}>The Model</h4>
+      {/* Technology */}
+      <section style={{ ...section, background:'#F8F8F8' }}>
+        <div style={inner}>
+          <h2 style={sectionHead}>The Technology Behind Verity-X</h2>
+          <div style={divider}/>
+          <div style={techGrid}>
+
+            <div style={techCard}>
+              <div style={techIconWrap}>
+                <img src={process.env.PUBLIC_URL+'/model.png'} alt="AI Model" width="52" height="52"/>
               </div>
-              <p style={techTextStyle}>
-                Verity-X leverages a sophisticated Convolutional Neural 
-                Network (CNN) architecture built upon transfer learning 
-                principles. Our model utilizes the proven XceptionNet 
-                architecture as its foundation, fine-tuned specifically for 
-                deepfake detection tasks to achieve exceptional accuracy 
-                and reliability in identifying manipulated content.
+              <h4 style={techCardTitle}>The Model</h4>
+              <p style={techText}>
+                Verity-X uses an <strong>EfficientNet-B4</strong> convolutional neural network as a spatial
+                feature extractor, combined with a temporal mean-max pooling head for video-level
+                classification. The architecture was trained using a progressive backbone unfreezing
+                schedule and cosine learning rate annealing.
+              </p>
+              <div style={statStrip}>
+                {[['Accuracy','85.84%'],['AUC-ROC','0.9307'],['EER','14.61%']].map(([l,v])=>(
+                  <div key={l} style={statPill}>
+                    <span style={statPillLabel}>{l}</span>
+                    <span style={statPillValue}>{v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={techCard}>
+              <div style={techIconWrap}>
+                <img src={process.env.PUBLIC_URL+'/data.png'} alt="Data" width="52" height="52"/>
+              </div>
+              <h4 style={techCardTitle}>The Data</h4>
+              <p style={techText}>
+                The model was trained and evaluated on the industry-standard{' '}
+                <strong>DeepFake Detection Challenge (DFDC)</strong> dataset, specifically using four
+                strategic subsets (Parts 0, 19, 45, and 49) for a total of 2,912 balanced training
+                videos. The <strong>Celeb-DF v2</strong> dataset was also used in comparative experiments
+                to evaluate cross-domain generalisation.
               </p>
             </div>
 
-            {/* Data Box */}
-            <div style={techBoxStyle}>
-              <div style={techHeaderStyle}>
-                <img
-                  src={process.env.PUBLIC_URL + "/data.png"}
-                  alt="Data"
-                  width="60"
-                  height="60"
-                  style={techIconStyle}
-                />
-                <h4 style={techSubtitleStyle}>The Data</h4>
+            <div style={techCard}>
+              <div style={techIconWrap}>
+                <img src={process.env.PUBLIC_URL+'/model.png'} alt="Grad-CAM" width="52" height="52"/>
               </div>
-              <p style={techTextStyle}>
-                Quality data is the cornerstone of effective machine learning. 
-                Verity-X was trained and rigorously tested on industry-
-                standard datasets including <strong style={boldStyle}>DFDC (Preview)</strong> and <strong style={boldStyle}>Celeb-
-                DF v2 datasets</strong>, ensuring robust performance across diverse 
-                scenarios and maintaining the highest standards of detection 
-                accuracy.
+              <h4 style={techCardTitle}>Explainability</h4>
+              <p style={techText}>
+                Verity-X generates <strong>Grad-CAM (Gradient-weighted Class Activation Mapping)</strong>{' '}
+                heatmaps for videos classified as deepfakes. These heatmaps highlight the specific facial
+                regions that most influenced the model's prediction, providing users with interpretable
+                evidence rather than a black-box verdict.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ===== DEVELOPER SECTION ===== */}
-      <section style={devSectionStyle}>
-        <div style={containerStyle}>
-          <h2 style={sectionTitleStyle}>Meet the Developer</h2>
-          <div style={dividerStyle}></div>
-          <div style={devBoxStyle}>
-            <img
-              src={process.env.PUBLIC_URL + "/Avatar.png"}
-              alt="Developer Avatar"
-              width="120"
-              height="120"
-              style={avatarStyle}
-            />
-            <h3 style={devNameStyle}>Sarindi Rithosha</h3>
-            <p style={devRoleStyle}>Final Year Student, Software Engineering</p>
-            <p style={devTextStyle}>
-              As a software engineering student, I developed Verity-X as my final-year project to tackle the escalating threat of deepfakes. This project is a culmination of my academic journey, where I've leveraged key principles of agile development, DevOps practices, and full-stack architecture. By integrating a robust backend API with a dynamic frontend UI, I've combined my skills in machine learning (ML), computer vision, and cybersecurity into a practical, scalable solution. Verity-X not only demonstrates my proficiency in these technical domains but also my commitment to applying technology to solve critical real-world problems.
+      {/* Developer */}
+      <section style={section}>
+        <div style={inner}>
+          <h2 style={sectionHead}>Meet the Developer</h2>
+          <div style={divider}/>
+          <div style={devCard}>
+            <img src={process.env.PUBLIC_URL+'/Avatar.png'} alt="Developer"
+              width="110" height="110" style={avatar}/>
+            <h3 style={devName}>Sarindi Rithosha</h3>
+            <p style={devRole}>Final Year Student · Software Engineering · Plymouth University</p>
+            <p style={{ ...bodyText, textAlign:'center', maxWidth:'680px' }}>
+              Verity-X was developed as a Final Year Individual Project (PUSL3190) at Plymouth University.
+              The project combines full-stack web development, machine learning, and computer vision to
+              deliver a practical, scalable deepfake detection solution. It demonstrates proficiency in
+              agile development, FastAPI backend engineering, React frontend architecture, Firebase
+              integration, and deep learning model training on cloud infrastructure.
             </p>
           </div>
         </div>
       </section>
 
-      {/* ===== CONTACT SECTION ===== */}
-      <section style={contactSectionStyle}>
-        <div style={containerStyle}>
-          <h2 style={sectionTitleStyle}>Contact Us</h2>
-          <div style={dividerStyle}></div>
-          <p style={contactIntroStyle}>
-            Have questions about Verity-X or interested in collaboration? We'd love to hear from you.
+      {/* Contact */}
+      <section style={{ ...section, background:'#F8F8F8' }}>
+        <div style={inner}>
+          <h2 style={sectionHead}>Contact</h2>
+          <div style={divider}/>
+          <p style={{ ...bodyText, textAlign:'center', marginBottom:'2rem' }}>
+            Have questions about Verity-X or interested in collaboration? Get in touch.
           </p>
-          <div style={contactBoxesContainer}>
-            {/* Email Box */}
-            <div style={contactBoxStyle}>
-              <img
-                src={process.env.PUBLIC_URL + "/mail.png"}
-                alt="Email"
-                width="50"
-                height="50"
-                style={contactIconStyle}
-              />
-              <h4 style={contactSubtitleStyle}>Email</h4>
-              <p style={contactTextStyle}>sarindi@verity-x.com</p>
+          <div style={contactGrid}>
+
+            <div style={contactCard}>
+              <img src={process.env.PUBLIC_URL+'/mail.png'} alt="Email" width="44" height="44" style={contactIcon}/>
+              <h4 style={contactTitle}>Email</h4>
+              <a href="mailto:sarindi@verity-x.com" style={contactLink}>sarindi@verity-x.com</a>
             </div>
 
-            {/* LinkedIn Box */}
-            <div style={contactBoxStyle}>
-              <img
-                src={process.env.PUBLIC_URL + "/linkendin1.png"}
-                alt="LinkedIn"
-                width="50"
-                height="50"
-                style={contactIconStyle}
-              />
-              <h4 style={contactSubtitleStyle}>LinkedIn</h4>
-              <p style={contactTextStyle}>Connect with us</p>
+            <div style={contactCard}>
+              <img src={process.env.PUBLIC_URL+'/github.png'} alt="GitHub" width="44" height="44" style={contactIcon}/>
+              <h4 style={contactTitle}>GitHub</h4>
+              <a href="https://github.com" target="_blank" rel="noopener noreferrer" style={contactLink}>
+                View the Repository
+              </a>
             </div>
 
-            {/* GitHub Box */}
-            <div style={contactBoxStyle}>
-              <img
-                src={process.env.PUBLIC_URL + "/github.png"}
-                alt="GitHub"
-                width="50"
-                height="50"
-                style={contactIconStyle}
-              />
-              <h4 style={contactSubtitleStyle}>GitHub</h4>
-              <p style={contactTextStyle}>View Our Code</p>
-            </div>
           </div>
         </div>
       </section>
 
-      {/* ===== GAP BEFORE FOOTER ===== */}
-      <div style={gapStyle}></div>
+      <div style={{ height:'60px', background:'#E5E3E3' }}/>
     </div>
   );
 }
 
-// ===== STYLES =====
-
-const pageStyle = {
-  backgroundColor: '#E5E3E3',
-};
-
-const containerStyle = {
-  maxWidth: '1200px',
-  margin: '0 auto',
-  padding: '0 1rem',
-};
-
-// Title Section
-const titleSectionStyle = {
-  backgroundColor: '#F8F8F8',
-  padding: '4rem 0',
-  textAlign: 'center',
-};
-
-const titleStyle = {
-  color: '#013D83',
-  fontSize: '3rem',
-  fontWeight: '700',
-  marginBottom: '1rem',
-};
-
-const subtitleStyle = {
-  color: '#000',
-  fontSize: '1.3rem',
-  opacity: '0.8',
-  margin: '0',
-};
-
-// Mission Section
-const missionSectionStyle = {
-  backgroundColor: '#E5E3E3',
-  padding: '4rem 0',
-};
-
-const missionBoxStyle = {
-  backgroundColor: '#F8F8F8',
-  borderRadius: '15px',
-  padding: '3rem',
-  marginTop: '2rem',
-  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-  marginRight: '7rem',
-  marginLeft: '7rem',
-};
-
-const missionTextStyle = {
-  color: '#000',
-  fontSize: '1.1rem',
-  lineHeight: '1.8',
-  textAlign: 'left',
-  margin: '0',
-};
-
-// Technology Section
-const techSectionStyle = {
-  backgroundColor: '#F8F8F8',
-  padding: '4rem 0',
-};
-
-const techBoxesContainer = {
-  display: 'flex',
-  gap: '2rem',
-  marginTop: '2rem',
-  flexWrap: 'wrap',
-  justifyContent: 'center',
-};
-
-const techBoxStyle = {
-  backgroundColor: '#E5E3E3',
-  borderRadius: '15px',
-  padding: '2rem',
-  flex: '1',
-  minWidth: '300px',
-  maxWidth: '500px',
-  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-};
-
-const techHeaderStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  marginBottom: '1.5rem',
-};
-
-const techIconStyle = {
-  marginRight: '1rem',
-};
-
-const techSubtitleStyle = {
-  color: '#013D83',
-  fontSize: '1.5rem',
-  fontWeight: '700',
-  margin: '0',
-};
-
-const techTextStyle = {
-  color: '#000',
-  fontSize: '1rem',
-  lineHeight: '1.6',
-  textAlign: 'left',
-  margin: '0',
-};
-
-const boldStyle = {
-  fontWeight: '700',
-  color: '#000',
-};
-
-// Developer Section
-const devSectionStyle = {
-  backgroundColor: '#E5E3E3',
-  padding: '4rem 0',
-};
-
-const devBoxStyle = {
-  backgroundColor: '#F8F8F8',
-  borderRadius: '15px',
-  padding: '3rem',
-  marginTop: '2rem',
-  textAlign: 'center',
-  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-};
-
-const avatarStyle = {
-  borderRadius: '50%',
-  marginBottom: '1.5rem',
-  border: '4px solid #E5E3E3',
-};
-
-const devNameStyle = {
-  color: '#013D83',
-  fontSize: '2rem',
-  fontWeight: '700',
-  margin: '0 0 0.5rem 0',
-};
-
-const devRoleStyle = {
-  color: '#A9D6E5',
-  fontSize: '1.2rem',
-  fontWeight: '600',
-  margin: '0 0 1.5rem 0',
-};
-
-const devTextStyle = {
-  color: '#000',
-  fontSize: '1.1rem',
-  lineHeight: '1.7',
-  textAlign: 'center',
-  margin: '0',
-};
-
-// Contact Section
-const contactSectionStyle = {
-  backgroundColor: '#F8F8F8',
-  padding: '4rem 0',
-};
-
-const contactIntroStyle = {
-  color: '#000',
-  fontSize: '1.1rem',
-  textAlign: 'center',
-  margin: '2rem 0 3rem 0',
-  opacity: '0.8',
-};
-
-const contactBoxesContainer = {
-  display: 'flex',
-  gap: '2rem',
-  justifyContent: 'center',
-  flexWrap: 'wrap',
-};
-
-const contactBoxStyle = {
-  backgroundColor: '#E5E3E3',
-  borderRadius: '15px',
-  padding: '2rem',
-  textAlign: 'center',
-  minWidth: '250px',
-  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-  transition: 'transform 0.3s ease',
-};
-
-contactBoxStyle[':hover'] = {
-  transform: 'translateY(-5px)',
-};
-
-const contactIconStyle = {
-  marginBottom: '1rem',
-};
-
-const contactSubtitleStyle = {
-  color: '#013D83',
-  fontSize: '1.3rem',
-  fontWeight: '700',
-  margin: '0 0 0.5rem 0',
-};
-
-const contactTextStyle = {
-  color: '#000',
-  fontSize: '1rem',
-  margin: '0',
-  opacity: '0.8',
-};
-
-// Common Styles
-const sectionTitleStyle = {
-  color: '#013D83',
-  fontSize: '2.5rem',
-  fontWeight: '700',
-  textAlign: 'center',
-  margin: '0 0 1rem 0',
-};
-
-const dividerStyle = {
-  height: '3px',
-  width: '80px',
-  backgroundColor: '#013D83',
-  margin: '0 auto 2rem auto',
-};
-
-// Gap before footer
-const gapStyle = {
-  height: '60px',
-  backgroundColor: '#E5E3E3',
-  width: '100%',
-};
+const page         = { background:'#E5E3E3', fontFamily:"'Segoe UI',sans-serif" };
+const titleSection = { background:'#F8F8F8', padding:'4.5rem 1rem', textAlign:'center' };
+const titleStyle   = { color:'#013D83', fontSize:'2.8rem', fontWeight:800, margin:'0 0 0.75rem' };
+const subtitleStyle= { color:'#374151', fontSize:'1.15rem', margin:0, opacity:0.8 };
+const section      = { background:'#E5E3E3', padding:'4rem 1rem' };
+const inner        = { maxWidth:'1140px', margin:'0 auto' };
+const sectionHead  = { color:'#013D83', fontSize:'2.2rem', fontWeight:700, textAlign:'center', margin:'0 0 0.75rem' };
+const divider      = { height:'3px', width:'70px', background:'#013D83', margin:'0 auto 2.5rem', borderRadius:'2px' };
+const bodyText     = { color:'#374151', fontSize:'1rem', lineHeight:1.75, margin:0 };
+const missionBox   = { background:'white', borderRadius:'14px', padding:'2.5rem', boxShadow:'0 2px 12px rgba(0,0,0,0.07)', maxWidth:'820px', margin:'0 auto' };
+const techGrid     = { display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(290px,1fr))', gap:'1.5rem', marginTop:'1rem' };
+const techCard     = { background:'white', borderRadius:'14px', padding:'2rem', boxShadow:'0 2px 8px rgba(0,0,0,0.07)' };
+const techIconWrap = { marginBottom:'1rem' };
+const techCardTitle= { color:'#013D83', fontSize:'1.2rem', fontWeight:700, margin:'0 0 0.75rem' };
+const techText     = { ...bodyText, fontSize:'0.9rem' };
+const statStrip    = { display:'flex', gap:'0.5rem', marginTop:'1.1rem', flexWrap:'wrap' };
+const statPill     = { display:'flex', flexDirection:'column', alignItems:'center', background:'#eff6ff', borderRadius:'8px', padding:'0.4rem 0.75rem', flex:1, minWidth:'70px' };
+const statPillLabel= { fontSize:'0.65rem', color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.06em' };
+const statPillValue= { fontSize:'1rem', fontWeight:700, color:'#013D83' };
+const devCard      = { background:'white', borderRadius:'14px', padding:'3rem 2rem', boxShadow:'0 2px 8px rgba(0,0,0,0.07)', textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center', gap:'0.5rem' };
+const avatar       = { borderRadius:'50%', border:'4px solid #E5E3E3', marginBottom:'0.5rem' };
+const devName      = { color:'#013D83', fontSize:'1.6rem', fontWeight:700, margin:0 };
+const devRole      = { color:'#A9D6E5', fontSize:'0.95rem', fontWeight:600, margin:'0 0 0.75rem' };
+const contactGrid  = { display:'flex', gap:'1.5rem', justifyContent:'center', flexWrap:'wrap' };
+const contactCard  = { background:'white', borderRadius:'14px', padding:'2rem', textAlign:'center', minWidth:'220px', boxShadow:'0 2px 8px rgba(0,0,0,0.07)', flex:'0 1 260px' };
+const contactIcon  = { marginBottom:'0.75rem' };
+const contactTitle = { color:'#013D83', fontSize:'1.15rem', fontWeight:700, margin:'0 0 0.4rem' };
+const contactLink  = { color:'#2563eb', fontSize:'0.9rem', textDecoration:'none' };
 
 export default About;

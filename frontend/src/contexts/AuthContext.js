@@ -1,207 +1,156 @@
-// AuthContext.js - Update to track user online status
+// AuthContext.js
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { auth, getCurrentUser, logoutUser } from '../firebase';
 
 const AuthContext = createContext();
 
-export const useAuth = () => {
-    return useContext(AuthContext);
-};
+export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
-    const [currentUser, setCurrentUser] = useState(null);
-    const [userProfile, setUserProfile] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [uploadCount, setUploadCount] = useState(0);
+  const [currentUser,  setCurrentUser]  = useState(null);
+  const [userProfile,  setUserProfile]  = useState(null);
+  const [loading,      setLoading]      = useState(true);
+  const [uploadCount,  setUploadCount]  = useState(0);
 
-    // Track uploads for unregistered users
-    useEffect(() => {
-        if (!currentUser) {
-            const storedCount = localStorage.getItem('unregisteredUploadCount');
-            setUploadCount(storedCount ? parseInt(storedCount) : 0);
-        }
-    }, [currentUser]);
+  // Guest upload count via localStorage
+  useEffect(() => {
+    if (!currentUser) {
+      const stored = localStorage.getItem('unregisteredUploadCount');
+      setUploadCount(stored ? parseInt(stored) : 0);
+    }
+  }, [currentUser]);
 
-    const updateUserOnlineStatus = async (userId, isOnline) => {
-        try {
-            const token = await auth.currentUser.getIdToken();
-            const response = await fetch(`http://localhost:8000/admin/user/${userId}/update-online-status`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ is_online: isOnline })
-            });
-            
-            if (!response.ok) {
-                console.error('Failed to update online status:', response.status);
-            }
-        } catch (error) {
-            console.error('Failed to update online status:', error);
-        }
-    };
+  const updateUserOnlineStatus = async (userId, isOnline) => {
+    try {
+      const token = await auth.currentUser.getIdToken();
+      await fetch(`http://localhost:8000/admin/user/${userId}/update-online-status`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_online: isOnline }),
+      });
+    } catch (error) {
+      console.error('Failed to update online status:', error);
+    }
+  };
 
-    const fetchUserProfile = async (user) => {
-        try {
-            const token = await user.getIdToken();
-            const response = await fetch(`http://localhost:8000/auth/user/${user.uid}`, {
-                headers: { 
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-            
-            if (response.ok) {
-                const profileData = await response.json();
-                setUserProfile(profileData);
-                
-                // Update user as online
-                if (user.uid) {
-                    await updateUserOnlineStatus(user.uid, true);
-                }
-                
-                return profileData;
-            }
-        } catch (error) {
-            console.error('Error fetching user profile:', error);
-        }
-        return null;
-    };
+  const fetchUserProfile = async (user) => {
+    try {
+      const token    = await user.getIdToken();
+      const response = await fetch(`http://localhost:8000/auth/user/${user.uid}`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      });
+      if (response.ok) {
+        const profileData = await response.json();
+        setUserProfile(profileData);
+        if (user.uid) await updateUserOnlineStatus(user.uid, true);
+        return profileData;
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+    return null;
+  };
 
-    const updateProfile = async () => {
-        if (currentUser) {
-            await fetchUserProfile(currentUser);
-        }
-    };
+  const updateProfile = async () => {
+    if (currentUser) await fetchUserProfile(currentUser);
+  };
 
-    useEffect(() => {
-        const unsubscribe = auth.onAuthStateChanged(async (user) => {
-            setCurrentUser(user);
-            
-            if (user) {
-               const profile = await fetchUserProfile(user);
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      setCurrentUser(user);
 
-                if (user.email === 'verityx.team@gmail.com') {
-                    setUserProfile({
-                    ...profile,
-                    isAdmin: true
-                    });
-                } else {
-                    setUserProfile(profile);
-                }
-
-                try {
-                    // Get user's upload count from backend
-                    const token = await user.getIdToken();
-                    const response = await fetch('http://localhost:8000/uploads/limit', {
-                        headers: { 
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        }
-                    });
-                    
-                    if (response.ok) {
-                        const data = await response.json();
-                        setUploadCount(data.current_count || 0);
-                    }
-                } catch (error) {
-                    console.error('Error fetching upload count:', error);
-                } 
-            } else {
-                setUserProfile(null);
-                // Unregistered user - get from local storage
-                const storedCount = localStorage.getItem('unregisteredUploadCount');
-                setUploadCount(storedCount ? parseInt(storedCount) : 0);
-            }
-            
-            setLoading(false);
-        });
-
-        return unsubscribe;
-    }, []);
-
-    // Update online status when user leaves the app
-    useEffect(() => {
-        const handleBeforeUnload = async () => {
-            if (currentUser && currentUser.uid) {
-                await updateUserOnlineStatus(currentUser.uid, false);
-            }
-        };
-
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        
-        return () => {
-            window.removeEventListener('beforeunload', handleBeforeUnload);
-        };
-    }, [currentUser]);
-
-    const incrementUploadCount = async () => {
-        if (currentUser) {
-            // Registered user - update in backend
-            try {
-                const token = await currentUser.getIdToken();
-                const response = await fetch('http://localhost:8000/uploads/increment', {
-                    method: 'POST',
-                    headers: { 
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-                
-                if (response.ok) {
-                    const result = await response.json();
-                    setUploadCount(result.current_count || uploadCount + 1);
-                }
-            } catch (error) {
-                console.error('Error incrementing upload count:', error);
-            }
+      if (user) {
+        const profile = await fetchUserProfile(user);
+        if (user.email === 'verityx.team@gmail.com') {
+          setUserProfile({ ...profile, isAdmin: true });
         } else {
-            // Unregistered user - update in local storage
-            const newCount = uploadCount + 1;
-            setUploadCount(newCount);
-            localStorage.setItem('unregisteredUploadCount', newCount.toString());
+          setUserProfile(profile);
         }
-    };
 
-    const canUpload = () => {
-        const maxUploads = currentUser ? 50 : 3;
-        return uploadCount < maxUploads;
-    };
-
-    const getUploadLimit = () => {
-        return currentUser ? 50 : 3;
-    };
-
-    const logout = async () => {
         try {
-            // Update user as offline before logout
-            if (currentUser && currentUser.uid) {
-                await updateUserOnlineStatus(currentUser.uid, false);
-            }
-            
-            await logoutUser();
-            setCurrentUser(null);
-            setUploadCount(0);
+          const token    = await user.getIdToken();
+          const response = await fetch('http://localhost:8000/uploads/limit', {
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          });
+          if (response.ok) {
+            const data = await response.json();
+            setUploadCount(data.current_count || 0);
+          }
         } catch (error) {
-            console.error('Logout error:', error);
+          console.error('Error fetching upload count:', error);
         }
-    };
+      } else {
+        setUserProfile(null);
+        const stored = localStorage.getItem('unregisteredUploadCount');
+        setUploadCount(stored ? parseInt(stored) : 0);
+      }
 
-    const value = {
-        currentUser,
-        userProfile,
-        uploadCount,
-        incrementUploadCount,
-        canUpload,
-        getUploadLimit,
-        logout,
-        updateProfile 
-    };
+      setLoading(false);
+    });
+    return unsubscribe;
+  }, []);
 
-    return (
-        <AuthContext.Provider value={value}>
-            {!loading && children}
-        </AuthContext.Provider>
-    );
+  useEffect(() => {
+    const handleBeforeUnload = async () => {
+      if (currentUser?.uid) await updateUserOnlineStatus(currentUser.uid, false);
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [currentUser]);
+
+  const incrementUploadCount = async () => {
+    if (currentUser) {
+      try {
+        const token    = await currentUser.getIdToken();
+        const response = await fetch('http://localhost:8000/uploads/increment', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        });
+        if (response.ok) {
+          const result = await response.json();
+          setUploadCount(result.current_count || uploadCount + 1);
+        }
+      } catch (error) {
+        console.error('Error incrementing upload count:', error);
+      }
+    } else {
+      const newCount = uploadCount + 1;
+      setUploadCount(newCount);
+      localStorage.setItem('unregisteredUploadCount', newCount.toString());
+    }
+  };
+
+  // Registered users have UNLIMITED uploads (max_uploads = -1)
+  const canUpload = () => {
+    if (currentUser) return true;           // always true for registered
+    return uploadCount < 3;                 // guest: 3 max
+  };
+
+  const getUploadLimit = () => {
+    if (currentUser) return -1;             // -1 = unlimited
+    return 3;
+  };
+
+  const logout = async () => {
+    try {
+      if (currentUser?.uid) await updateUserOnlineStatus(currentUser.uid, false);
+      await logoutUser();
+      setCurrentUser(null);
+      setUploadCount(0);
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
+  const value = {
+    currentUser, userProfile, uploadCount,
+    incrementUploadCount, canUpload, getUploadLimit,
+    logout, updateProfile,
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {!loading && children}
+    </AuthContext.Provider>
+  );
 };

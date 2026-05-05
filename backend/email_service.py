@@ -9,7 +9,7 @@ from email.mime.multipart import MIMEMultipart
 import json
 from pydantic import BaseModel
 from datetime import datetime
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 
 load_dotenv()
@@ -24,7 +24,7 @@ class FeedbackRequest(BaseModel):
     timestamp: str = ""
     user_name: str = "Anonymous User"
     user_email: str = ""
-    user_id: str = None
+    user_id: Optional[str] = None
     is_logged_in: bool = False
 
 class EmailService:

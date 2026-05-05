@@ -259,7 +259,7 @@ export default function Results() {
     setSubmitting(true); setFbStatus(null);
     try {
       const ui = userInfo();
-      await axios.post('http://localhost:8000/submit-feedback', {
+      await axios.post(`${process.env.REACT_APP_API_URL}/submit-feedback`, {
         feedback:fbText.trim(), rating,
         analysis_id:data?.analysis_id||'unknown',
         prediction:data?.prediction||'unknown',
@@ -290,7 +290,7 @@ export default function Results() {
         </div>
         <div style={vWrap}>
           <video controls style={vEl} onError={() => setVidErr(true)} preload="metadata">
-            <source src={`http://localhost:8000/video/${data.analysis_id}`} type="video/mp4"/>
+            <source src={`${process.env.REACT_APP_API_URL}/video/${data.analysis_id}`} type="video/mp4"/>
           </video>
         </div>
       </div>

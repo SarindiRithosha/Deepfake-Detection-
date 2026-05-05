@@ -71,7 +71,7 @@ function Signup() {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/auth/signup', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -106,7 +106,7 @@ function Signup() {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/auth/verify-signup-otp', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/verify-signup-otp`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -133,7 +133,7 @@ function Signup() {
 
   const handleResendOtp = async () => {
     try {
-      const response = await fetch('http://localhost:8000/auth/resend-otp', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/resend-otp`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

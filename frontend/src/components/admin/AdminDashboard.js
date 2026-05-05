@@ -8,7 +8,7 @@ import {
 } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 
-const API = 'http://localhost:8000';
+const API = process.env.REACT_APP_API_URL;
 
 export default function AdminDashboard() {
   const navigate = useNavigate();

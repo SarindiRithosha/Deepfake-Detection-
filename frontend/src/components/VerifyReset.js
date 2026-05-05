@@ -36,7 +36,7 @@ function VerifyReset() {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/auth/verify-password-otp', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/verify-password-otp`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -63,7 +63,7 @@ function VerifyReset() {
 
   const handleResendOtp = async () => {
     try {
-      const response = await fetch('http://localhost:8000/auth/resend-otp', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/resend-otp`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

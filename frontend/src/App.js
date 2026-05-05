@@ -34,7 +34,7 @@ function AdminRoute({ children }) {
       }
 
       try {
-        const response = await fetch(`http://localhost:8000/auth/admin/verify?token=${token}`); 
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/admin/verify?token=${token}`); 
 
 
         if (response.ok) {

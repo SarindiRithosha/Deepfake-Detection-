@@ -1,0 +1,27 @@
+# Git
+.git
+.gitignore
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Video cache - stateless, not needed on Cloud Run
+video_cache/
+
+# Local dev only
+.env
+deploy.ps1
+
+# Unnecessary JSON logs
+admin_notifications.json
+user_feedback.json
+
+# Model files - too large for git
+model_cache/

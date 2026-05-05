@@ -34,7 +34,7 @@ function UserProfile() {
   const confirmNameChange = async () => {
     try {
       const token    = await currentUser.getIdToken();
-      const response = await fetch(`http://localhost:8000/auth/user/${currentUser.uid}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/user/${currentUser.uid}`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: tempName }),
@@ -48,7 +48,7 @@ function UserProfile() {
     e.preventDefault();
     try {
       const token    = await currentUser.getIdToken();
-      const response = await fetch('http://localhost:8000/contact', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/contact`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...contactForm, userEmail: userData.email, userName: userData.name }),
@@ -60,7 +60,7 @@ function UserProfile() {
   const handleDeleteAccount = async () => {
     try {
       const token    = await currentUser.getIdToken();
-      const response = await fetch(`http://localhost:8000/auth/user/${currentUser.uid}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/user/${currentUser.uid}`, {
         method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` },
       });
       if (response.ok) { await logout(); navigate('/'); }

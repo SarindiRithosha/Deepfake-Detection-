@@ -23,7 +23,7 @@ export const AuthProvider = ({ children }) => {
   const updateUserOnlineStatus = async (userId, isOnline) => {
     try {
       const token = await auth.currentUser.getIdToken();
-      await fetch(`http://localhost:8000/admin/user/${userId}/update-online-status`, {
+      await fetch(`${process.env.REACT_APP_API_URL}/admin/user/${userId}/update-online-status`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_online: isOnline }),
@@ -36,7 +36,7 @@ export const AuthProvider = ({ children }) => {
   const fetchUserProfile = async (user) => {
     try {
       const token    = await user.getIdToken();
-      const response = await fetch(`http://localhost:8000/auth/user/${user.uid}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/user/${user.uid}`, {
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       });
       if (response.ok) {
@@ -69,7 +69,7 @@ export const AuthProvider = ({ children }) => {
 
         try {
           const token    = await user.getIdToken();
-          const response = await fetch('http://localhost:8000/uploads/limit', {
+          const response = await fetch(`${process.env.REACT_APP_API_URL}/uploads/limit`, {
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
           });
           if (response.ok) {
@@ -102,7 +102,7 @@ export const AuthProvider = ({ children }) => {
     if (currentUser) {
       try {
         const token    = await currentUser.getIdToken();
-        const response = await fetch('http://localhost:8000/uploads/increment', {
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/uploads/increment`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         });

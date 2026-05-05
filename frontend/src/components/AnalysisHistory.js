@@ -29,7 +29,7 @@ function AnalysisHistory() {
     try {
       const token    = await currentUser.getIdToken();
       const response = await axios.get(
-        `http://localhost:8000/analysis-history/${currentUser.uid}`,
+        `${process.env.REACT_APP_API_URL}/analysis-history/${currentUser.uid}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setAnalyses(response.data.analyses || []);

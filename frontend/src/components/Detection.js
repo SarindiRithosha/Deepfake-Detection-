@@ -46,7 +46,7 @@ function Detection() {
       const formData    = new FormData();
       formData.append('file', selectedFile);
 
-      const response = await axios.post('http://localhost:8000/analyze', formData, {
+      const response = await axios.post(`${process.env.REACT_APP_API_URL}/analyze`, formData, {
         headers: { 'Content-Type': 'multipart/form-data', ...authHeaders },
         onUploadProgress: (e) => setUploadProgress(Math.round((e.loaded * 100) / e.total)),
         timeout: 300000,
@@ -80,7 +80,7 @@ function Detection() {
       const authHeaders = await getAuthHeader();
 
       const response = await axios.post(
-        'http://localhost:8000/analyze-url',
+        `${process.env.REACT_APP_API_URL}/analyze-url`,
         { video_url: videoUrl },
         {
           headers: { 'Content-Type': 'application/json', ...authHeaders },

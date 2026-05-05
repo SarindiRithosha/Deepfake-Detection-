@@ -1,6 +1,11 @@
 # Environment variables
 .env
 serviceAccountKey.json
+deploy.ps1
+model_cache/
+video_cache/
+admin_notifications.json
+user_feedback.json
 
 # Python
 __pycache__/

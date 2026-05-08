@@ -182,7 +182,6 @@ function VerifyReset() {
   );
 }
 
-// Add new styles for enhanced functionality
 const errorAlertStyle = {
   backgroundColor: '#FFE6E6',
   color: '#D8000C',
@@ -224,7 +223,6 @@ const backLinkStyle = {
   textDecoration: 'none'
 };
 
-// Your existing styles remain exactly the same:
 const pageStyle = {
   backgroundColor: '#E5E3E3',
   minHeight: '100vh',

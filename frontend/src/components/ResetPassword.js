@@ -208,7 +208,7 @@ function ResetPassword() {
   );
 }
 
-// Add error alert style to your existing styles
+
 const errorAlertStyle = {
   backgroundColor: '#FFE6E6',
   color: '#D8000C',
@@ -219,7 +219,6 @@ const errorAlertStyle = {
   textAlign: 'center'
 };
 
-// Your existing styles remain exactly the same:
 const pageStyle = {
   backgroundColor: '#E5E3E3',
   minHeight: '100vh',

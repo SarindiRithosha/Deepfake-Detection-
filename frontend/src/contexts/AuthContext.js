@@ -120,9 +120,8 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Registered users have UNLIMITED uploads (max_uploads = -1)
   const canUpload = () => {
-    if (currentUser) return true;           // always true for registered
+    if (currentUser) return true;           
     return uploadCount < 3;                 // guest: 3 max
   };
 

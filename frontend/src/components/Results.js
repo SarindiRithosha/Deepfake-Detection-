@@ -74,10 +74,7 @@ export default function Results() {
     ? { user_name:userProfile.name||'User', user_email:currentUser.email||'', user_id:currentUser.uid, is_logged_in:true }
     : { user_name:'Anonymous', user_email:'', user_id:null, is_logged_in:false };
 
-  /* ── PDF ──────────────────────────────────────────────────────────────────
-     All jsPDF color calls use explicit r,g,b numbers — NO array spread.
-     setFillColor(...array) does NOT work in jsPDF.
-  ───────────────────────────────────────────────────────────────────────── */
+  /* ── PDF Generation: uses jsPDF to create a detailed report with consistent styling and a clean layout */
   const downloadPDF = async () => {
     if (!data) return;
     setPdfLoading(true);

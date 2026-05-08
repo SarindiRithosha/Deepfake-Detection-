@@ -275,7 +275,7 @@ export default function AdminDashboard() {
 }
 
 
-/* ── Dashboard tab ─────────────────────────────────────────────────────────── */
+/* ── Dashboard tab  */
 function DashboardView({ stats, systemStats, trendIcon, trendColor }) {
   if (!stats) return (
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',padding:'4rem'}}>
@@ -475,7 +475,7 @@ function DashboardView({ stats, systemStats, trendIcon, trendColor }) {
 }
 
 
-/* ── User Management tab ───────────────────────────────────────────────────── */
+/* ── User Management tab  */
 function UserManagement() {
   const [users,   setUsers]   = useState([]);
   const [loading, setLoading] = useState(true);
@@ -657,7 +657,7 @@ function UserManagement() {
 }
 
 
-/* ── Feedback tab ──────────────────────────────────────────────────────────── */
+/* ── Feedback tab  */
 function FeedbackView() {
   const [feedback, setFeedback] = useState([]);
   const [loading,  setLoading]  = useState(true);

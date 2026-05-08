@@ -57,9 +57,7 @@ function Login() {
     }
 
     try {
-      // Check if it's admin login BEFORE attempting Firebase auth
       if (formData.email === 'verityx.team@gmail.com') {
-        // For admin, we'll use a different approach
         const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/admin-login`, {
           method: 'POST',
           headers: {

@@ -21,7 +21,7 @@ import timm
 
 logger = logging.getLogger("verity_inference")
 
-# ── Constants ────────────────────────────────────────────────────────────────
+# ── Constants 
 GCS_PROJECT   = os.environ.get("GCS_PROJECT", "verity-x-deepfake")
 MODELS_BUCKET = os.environ.get("GCS_MODELS_BUCKET", "verity-x-models")
 TORCHSCRIPT_GCS  = "models/exp6_v3/v1_continued/exp6_v3_continued_v1_torchscript.pt"
@@ -65,7 +65,7 @@ class EfficientNetB4TemporalPooling(nn.Module):
         return self.temporal_head(pooled).squeeze(1)
 
 
-# ── Singleton model holders ──────────────────────────────────────────────────
+# ── Singleton model holders 
 _raw_model: Optional[EfficientNetB4TemporalPooling] = None
 _ts_model  = None   # TorchScript — for fast inference
 _model_loaded = False
@@ -130,20 +130,20 @@ def load_models() -> bool:
 
     os.makedirs(LOCAL_MODEL_DIR, exist_ok=True)
 
-    # ── 1. Download TorchScript if not cached ────────────────────────────
+    # ── 1. Download TorchScript if not cached 
     if not os.path.exists(LOCAL_TS_PATH):
         ok = _download_from_gcs(TORCHSCRIPT_GCS, LOCAL_TS_PATH)
         if not ok:
             logger.error("Could not download TorchScript model — inference disabled")
             return False
 
-    # ── 2. Download raw .pth if not cached (needed for Grad-CAM) ─────────
+    # ── 2. Download raw .pth if not cached (needed for Grad-CAM) 
     if not os.path.exists(LOCAL_PTH_PATH):
         ok = _download_from_gcs(PTH_GCS, LOCAL_PTH_PATH)
         if not ok:
             logger.warning("Could not download .pth — Grad-CAM will be disabled")
 
-    # ── 3. Load TorchScript model ─────────────────────────────────────────
+    # ── 3. Load TorchScript model 
     try:
         _ts_model = torch.jit.load(LOCAL_TS_PATH, map_location=DEVICE)
         _ts_model.eval()
@@ -152,7 +152,7 @@ def load_models() -> bool:
         logger.error(f"Failed to load TorchScript model: {e}")
         return False
 
-    # ── 4. Load raw model for Grad-CAM ────────────────────────────────────
+    # ── 4. Load raw model for Grad-CAM 
     if os.path.exists(LOCAL_PTH_PATH):
         try:
             _raw_model = EfficientNetB4TemporalPooling().to(DEVICE)
@@ -172,7 +172,7 @@ def is_ready() -> bool:
     return _model_loaded and _ts_model is not None
 
 
-# ── Frame extraction ─────────────────────────────────────────────────────────
+# ── Frame extraction and preprocessing 
 def extract_frames(video_path: str,
                    n_frames: int = FRAMES_PER_VIDEO,
                    frame_size: int = FRAME_SIZE) -> Tuple[List[np.ndarray], dict]:
@@ -233,7 +233,7 @@ def extract_frames(video_path: str,
     return frames, video_info
 
 
-# ── Transform ────────────────────────────────────────────────────────────────
+# ── Transform 
 _eval_transform = T.Compose([
     T.ToPILImage(),
     T.ToTensor(),
@@ -247,7 +247,7 @@ def _frames_to_tensor(frames: List[np.ndarray]) -> torch.Tensor:
     return torch.stack(tensors).unsqueeze(0).to(DEVICE)
 
 
-# ── Inference ────────────────────────────────────────────────────────────────
+# ── Inference 
 def run_inference(frames: List[np.ndarray]) -> dict:
     """
     Run model inference on extracted frames.
@@ -279,7 +279,7 @@ def run_inference(frames: List[np.ndarray]) -> dict:
     }
 
 
-# ── Grad-CAM ─────────────────────────────────────────────────────────────────
+# ── Grad-CAM 
 class _GradCAMHook:
     """Registers forward/backward hooks on a target layer."""
     def __init__(self, layer: nn.Module):
@@ -383,7 +383,7 @@ def generate_gradcam_for_frames(frames: List[np.ndarray]) -> List[Optional[str]]
     return heatmaps
 
 
-# ── Frame serialisation ───────────────────────────────────────────────────────
+# ── Frame serialisation 
 def frame_to_b64(frame: np.ndarray,
                  thumbnail: bool = False,
                  thumb_size: Tuple[int, int] = (300, 200)) -> str:
@@ -397,7 +397,7 @@ def frame_to_b64(frame: np.ndarray,
     return f"data:image/jpeg;base64,{b64}"
 
 
-# ── Per-frame suspicious score ────────────────────────────────────────────────
+# ── Per-frame suspicious score 
 def score_individual_frames(frames: List[np.ndarray]) -> List[float]:
     """
     Score each frame individually using the TorchScript model.
@@ -422,7 +422,7 @@ def score_individual_frames(frames: List[np.ndarray]) -> List[float]:
     return scores
 
 
-# ── Main analysis pipeline ────────────────────────────────────────────────────
+# ── Main analysis pipeline 
 def analyse_video(video_path: str) -> dict:
     """
     Full pipeline: extract frames → inference → Grad-CAM (FAKE only) →

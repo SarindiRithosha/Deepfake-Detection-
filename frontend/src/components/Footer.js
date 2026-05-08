@@ -21,7 +21,7 @@ function Footer() {
             <SocialIcon
               src="/github (1).png"
               alt="GitHub"
-              href="https://github.com"
+              href="https://github.com/SarindiRithosha/Deepfake-Detection-"
             />
           </div>
         </div>

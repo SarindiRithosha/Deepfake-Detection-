@@ -129,7 +129,7 @@ function About() {
             <div style={contactCard}>
               <img src={process.env.PUBLIC_URL + '/github.png'} alt="GitHub" width="44" height="44" style={contactIcon} />
               <h4 style={contactTitle}>GitHub</h4>
-              <a href="https://github.com" target="_blank" rel="noopener noreferrer" style={contactLink}>
+              <a href="https://github.com/SarindiRithosha/Deepfake-Detection-" target="_blank" rel="noopener noreferrer" style={contactLink}>
                 View the Repository
               </a>
             </div>

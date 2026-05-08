@@ -14,8 +14,7 @@ function Detection() {
   const navigate     = useNavigate();
   const { currentUser, uploadCount, incrementUploadCount, canUpload } = useAuth();
 
-  // ── Get Firebase auth token ──────────────────────────────────────────────
-  // FIX: sends Bearer token so backend receives real uid instead of "guest"
+  // ── Get Firebase auth token 
   const getAuthHeader = async () => {
     if (!currentUser) return {};
     try {
@@ -27,7 +26,7 @@ function Detection() {
     }
   };
 
-  // ── File upload ──────────────────────────────────────────────────────────
+  // ── File upload 
   const handleFileChange = async (selectedFile) => {
     if (!canUpload()) { setShowLimitModal(true); return; }
 
@@ -68,7 +67,7 @@ function Detection() {
     }
   };
 
-  // ── URL upload ───────────────────────────────────────────────────────────
+  // ── URL upload 
   const handleUrlUpload = async () => {
     if (!canUpload()) { setShowLimitModal(true); return; }
     if (!videoUrl.trim()) { setStatus('urlError'); return; }
@@ -96,7 +95,22 @@ function Detection() {
       }), 2500);
     } catch (error) {
       console.error('URL upload error:', error);
-      setStatus(error.response?.status === 400 ? 'urlError' : 'analysisError');
+      const detail = error.response?.data?.detail || '';
+      if (
+        error.response?.status === 400 ||
+        detail.includes('Invalid') ||
+        detail.includes('Unsupported')
+      ) {
+        setStatus('urlError');
+      } else if (
+        detail.includes('Sign in to confirm') ||
+        detail.includes('bot') ||
+        detail.includes('cookies')
+      ) {
+        setStatus('youtubeBotError');
+      } else {
+        setStatus('analysisError');
+      }
     }
   };
 
@@ -266,7 +280,7 @@ function Detection() {
         )}
 
         {/* ERRORS */}
-        {['formatError', 'sizeError', 'urlError', 'analysisError'].includes(status) && (
+        {['formatError', 'sizeError', 'urlError', 'analysisError', 'youtubeBotError'].includes(status) && (
           <div style={errorContainerStyle}>
             <img
               src={process.env.PUBLIC_URL + '/warning.png'}
@@ -283,6 +297,8 @@ function Detection() {
                 ? 'The file exceeds the 200MB limit. Please upload a smaller file.'
                 : status === 'urlError'
                 ? 'Unable to process this video URL. Please check the link and try again.'
+                : status === 'youtubeBotError'
+                ? 'YouTube URL analysis is currently unavailable — YouTube blocks automated downloads from cloud servers. Please download the video and upload it as a file instead.'
                 : 'The analysis failed. Please try again with a different video.'}
             </p>
             <button style={tryAgainButtonStyle} onClick={handleTryAgain}>
@@ -327,7 +343,7 @@ function Detection() {
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
+// ── Styles 
 
 const pageStyle = {
   padding: '2rem 1rem',
